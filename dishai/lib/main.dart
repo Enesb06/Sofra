@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
-// Supabase bilgilerin doğru, onlara dokunmuyoruz.
 const String supabaseUrl = 'https://dqqtwebzwjlgyewmezma.supabase.co';
 const String supabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxcXR3ZWJ6d2psZ3lld21lem1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4NzYzOTcsImV4cCI6MjA2NzQ1MjM5N30.QloA5Q3FCI5B2wGI3yx5ZOGZj3_Asmn71RGJFs4PlNQ';
@@ -50,7 +49,7 @@ class _HomePageState extends State<HomePage> {
   String? _result;
   Interpreter? _interpreter;
   List<String>? _labels;
-  bool _modelLoaded = false; // Modelin yüklenip yüklenmediğini takip eder.
+  bool _modelLoaded = false;
 
   @override
   void initState() {
@@ -60,7 +59,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('model.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
       final labelsData = await rootBundle.loadString('assets/labels.txt');
       _labels = labelsData
           .split('\n')
@@ -69,7 +68,7 @@ class _HomePageState extends State<HomePage> {
           .toList();
 
       setState(() {
-        _modelLoaded = true; // Model başarıyla yüklendi, arayüzü güncelle.
+        _modelLoaded = true;
       });
       print(
           'Model ve etiketler başarıyla yüklendi. Etiket sayısı: ${_labels?.length}');
@@ -107,10 +106,10 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // ... (Tahmin kodunun geri kalanı aynı)
     final imageData = await imageFile.readAsBytes();
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return;
+
     img.Image resizedImage =
         img.copyResize(originalImage, width: 224, height: 224);
     var imageBytes = resizedImage.getBytes(order: img.ChannelOrder.rgb);
@@ -141,12 +140,30 @@ class _HomePageState extends State<HomePage> {
       final predictedLabel = _labels![maxIndex];
       print("Tahmin edilen etiket: $predictedLabel, Skor: $maxScore");
 
-      // TODO: Supabase'den kalori bilgisini çekme adımını buraya ekleyeceğiz.
+      // === YENİ EKLENEN SUPABASE KODU ===
+      try {
+        final response = await supabase
+            .from('foods')
+            .select('calories_per_portion')
+            .eq('name', predictedLabel)
+            .single();
 
-      setState(() {
-        _result = "Yemek: ${predictedLabel.replaceAll('_', ' ')}";
-        _loading = false;
-      });
+        final calories = response['calories_per_portion'];
+        final foodName = predictedLabel.replaceAll('_', ' ');
+
+        setState(() {
+          _result = "Yemek: $foodName\nKalori: $calories kcal (1 Porsiyon)";
+          _loading = false;
+        });
+      } catch (e) {
+        print("Supabase'den kalori çekilirken hata: $e");
+        setState(() {
+          _result =
+              "Yemek: ${predictedLabel.replaceAll('_', ' ')}\nKalori bilgisi bulunamadı.";
+          _loading = false;
+        });
+      }
+      // === SUPABASE KODUNUN SONU ===
     } else {
       setState(() {
         _result = "Yemek tanınamadı.";
@@ -162,9 +179,8 @@ class _HomePageState extends State<HomePage> {
         title: const Text('DishAI - Lezzet Tanıyıcı'),
         backgroundColor: Colors.deepOrange.shade300,
       ),
-      body: !_modelLoaded // Model henüz yüklenmediyse...
+      body: !_modelLoaded
           ? const Center(
-              // Ekrana yükleniyor animasyonu göster
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -175,7 +191,6 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Center(
-              // Model yüklendiyse, normal arayüzü göster
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
@@ -201,13 +216,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _modelLoaded
-            ? _pickImage
-            : null, // Model yüklendiyse butonu aktif et, değilse pasif yap.
+        onPressed: _modelLoaded ? _pickImage : null,
         tooltip: 'Fotoğraf Seç',
-        backgroundColor: _modelLoaded
-            ? Colors.deepOrange
-            : Colors.grey, // Model yüklenmediyse rengi gri yap.
+        backgroundColor: _modelLoaded ? Colors.deepOrange : Colors.grey,
         child: const Icon(Icons.camera_alt),
       ),
     );
