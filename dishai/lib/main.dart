@@ -50,51 +50,108 @@ class _HomePageState extends State<HomePage> {
   String? _result;
   Interpreter? _interpreter;
   List<String>? _labels;
+  bool _modelLoaded = false; // Modelin yüklenip yüklenmediğini takip eder.
 
   @override
   void initState() {
     super.initState();
-    _loadModel(); // Model ve etiketleri uygulama başlarken yükle
+    _loadModel();
   }
 
-  // Model ve Etiket Yükleme Fonksiyonu
   Future<void> _loadModel() async {
     try {
-      // Modeli assets'den yükle
       _interpreter = await Interpreter.fromAsset('model.tflite');
-
-      // Etiketleri assets'den yükle
       final labelsData = await rootBundle.loadString('assets/labels.txt');
-      _labels = labelsData.split('\n');
+      _labels = labelsData
+          .split('\n')
+          .map((label) => label.trim())
+          .where((label) => label.isNotEmpty)
+          .toList();
 
-      print('Model ve etiketler başarıyla yüklendi.');
+      setState(() {
+        _modelLoaded = true; // Model başarıyla yüklendi, arayüzü güncelle.
+      });
+      print(
+          'Model ve etiketler başarıyla yüklendi. Etiket sayısı: ${_labels?.length}');
     } catch (e) {
-      print('Model yüklenirken hata oluştu: $e');
+      print('!!!!!!!! MODEL YÜKLENİRKEN HATA OLUŞTU: $e !!!!!!!!!!');
+      setState(() {
+        _result = "Model yüklenemedi.\nLütfen uygulamayı yeniden başlatın.";
+      });
     }
   }
 
-  // Resim Seçme Fonksiyonu (Dolu Hali)
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    // Galeriyi açmak için ImageSource.gallery, kamerayı açmak için ImageSource.camera
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
-        _loading = true; // Yükleme animasyonunu başlat
-        _result = ''; // Eski sonucu temizle
+        _loading = true;
+        _result = '';
       });
-      // TODO: Resim seçildikten sonra TAHMİN fonksiyonunu çağıracağız.
-      // Şimdilik sadece resmin ekranda görünmesini sağlıyoruz ve loading'i durduruyoruz.
-      // Bu, bir sonraki adımda değişecek.
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _loading = false;
-        });
-      });
+      _runInference(File(pickedFile.path));
     } else {
       print('Kullanıcı resim seçmedi.');
+    }
+  }
+
+  Future<void> _runInference(File imageFile) async {
+    if (!_modelLoaded || _interpreter == null || _labels == null) {
+      print('Model veya etiketler henüz yüklenmedi.');
+      setState(() {
+        _result = "Model hazır değil, lütfen bekleyin.";
+        _loading = false;
+      });
+      return;
+    }
+
+    // ... (Tahmin kodunun geri kalanı aynı)
+    final imageData = await imageFile.readAsBytes();
+    img.Image? originalImage = img.decodeImage(imageData);
+    if (originalImage == null) return;
+    img.Image resizedImage =
+        img.copyResize(originalImage, width: 224, height: 224);
+    var imageBytes = resizedImage.getBytes(order: img.ChannelOrder.rgb);
+    var buffer = Float32List(1 * 224 * 224 * 3);
+    var bufferIndex = 0;
+    for (var i = 0; i < imageBytes.length; i += 3) {
+      buffer[bufferIndex++] = (imageBytes[i] / 255.0);
+      buffer[bufferIndex++] = (imageBytes[i + 1] / 255.0);
+      buffer[bufferIndex++] = (imageBytes[i + 2] / 255.0);
+    }
+
+    var input = buffer.reshape([1, 224, 224, 3]);
+    var output =
+        List.filled(1 * _labels!.length, 0.0).reshape([1, _labels!.length]);
+
+    _interpreter!.run(input, output);
+
+    double maxScore = 0;
+    int maxIndex = -1;
+    for (int i = 0; i < output[0].length; i++) {
+      if (output[0][i] > maxScore) {
+        maxScore = output[0][i];
+        maxIndex = i;
+      }
+    }
+
+    if (maxIndex != -1) {
+      final predictedLabel = _labels![maxIndex];
+      print("Tahmin edilen etiket: $predictedLabel, Skor: $maxScore");
+
+      // TODO: Supabase'den kalori bilgisini çekme adımını buraya ekleyeceğiz.
+
+      setState(() {
+        _result = "Yemek: ${predictedLabel.replaceAll('_', ' ')}";
+        _loading = false;
+      });
+    } else {
+      setState(() {
+        _result = "Yemek tanınamadı.";
+        _loading = false;
+      });
     }
   }
 
@@ -105,30 +162,52 @@ class _HomePageState extends State<HomePage> {
         title: const Text('DishAI - Lezzet Tanıyıcı'),
         backgroundColor: Colors.deepOrange.shade300,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _image == null
-                ? const Text('Lütfen bir yemek fotoğrafı seçin.')
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(12.0),
-                    child: Image.file(_image!, height: 250, fit: BoxFit.cover),
-                  ),
-            const SizedBox(height: 20),
-            _loading
-                ? const CircularProgressIndicator()
-                : Text(
-                    _result ?? '',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
-                  ),
-          ],
-        ),
-      ),
+      body: !_modelLoaded // Model henüz yüklenmediyse...
+          ? const Center(
+              // Ekrana yükleniyor animasyonu göster
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 15),
+                  Text("Model Yükleniyor..."),
+                ],
+              ),
+            )
+          : Center(
+              // Model yüklendiyse, normal arayüzü göster
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _image == null
+                      ? const Text('Lütfen bir yemek fotoğrafı seçin.')
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(12.0),
+                          child: Image.file(_image!,
+                              height: 250, width: 250, fit: BoxFit.cover),
+                        ),
+                  const SizedBox(height: 20),
+                  _loading
+                      ? const CircularProgressIndicator()
+                      : Text(
+                          _result ?? '',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                ],
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _pickImage,
+        onPressed: _modelLoaded
+            ? _pickImage
+            : null, // Model yüklendiyse butonu aktif et, değilse pasif yap.
         tooltip: 'Fotoğraf Seç',
+        backgroundColor: _modelLoaded
+            ? Colors.deepOrange
+            : Colors.grey, // Model yüklenmediyse rengi gri yap.
         child: const Icon(Icons.camera_alt),
       ),
     );
