@@ -110,16 +110,22 @@ class _HomePageState extends State<HomePage> {
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return;
 
+    // 1. Resmi modelin istediği boyuta getiriyoruz (224x224)
     img.Image resizedImage =
         img.copyResize(originalImage, width: 224, height: 224);
+
+    // 2. Resmin ham byte verisini alıyoruz.
     var imageBytes = resizedImage.getBytes(order: img.ChannelOrder.rgb);
     var buffer = Float32List(1 * 224 * 224 * 3);
     var bufferIndex = 0;
-    for (var i = 0; i < imageBytes.length; i += 3) {
-      buffer[bufferIndex++] = (imageBytes[i] / 255.0);
-      buffer[bufferIndex++] = (imageBytes[i + 1] / 255.0);
-      buffer[bufferIndex++] = (imageBytes[i + 2] / 255.0);
+
+    // --- DEĞİŞİKLİK BURADA ---
+    // Piksel değerlerini 255'e bölmüyoruz.
+    // Modele ham (0-255) değerleri gönderiyoruz, çünkü modelin ilk katmanı bu işlemi kendi yapıyor.
+    for (var i = 0; i < imageBytes.length; i++) {
+      buffer[bufferIndex++] = imageBytes[i].toDouble();
     }
+    // --- DEĞİŞİKLİK SONU ---
 
     var input = buffer.reshape([1, 224, 224, 3]);
     var output =
@@ -127,8 +133,14 @@ class _HomePageState extends State<HomePage> {
 
     _interpreter!.run(input, output);
 
+    // --- HATA AYIKLAMA KODU ---
+    // Modelin verdiği olasılık listesini konsolda görelim.
+    print("MODELİN HAM ÇIKTISI (Olasılıklar): ${output[0]}");
+    // -------------------------
+
     double maxScore = 0;
     int maxIndex = -1;
+    // En yüksek olasılığa sahip indeksi buluyoruz
     for (int i = 0; i < output[0].length; i++) {
       if (output[0][i] > maxScore) {
         maxScore = output[0][i];
@@ -140,7 +152,6 @@ class _HomePageState extends State<HomePage> {
       final predictedLabel = _labels![maxIndex];
       print("Tahmin edilen etiket: $predictedLabel, Skor: $maxScore");
 
-      // === YENİ EKLENEN SUPABASE KODU ===
       try {
         final response = await supabase
             .from('foods')
@@ -149,21 +160,25 @@ class _HomePageState extends State<HomePage> {
             .single();
 
         final calories = response['calories_per_portion'];
-        final foodName = predictedLabel.replaceAll('_', ' ');
+        // Underscore'ları boşlukla değiştirerek daha güzel bir görünüm sağlıyoruz.
+        final foodName = predictedLabel
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join(' ');
 
         setState(() {
-          _result = "Yemek: $foodName\nKalori: $calories kcal (1 Porsiyon)";
+          _result = "Yemek: $foodName\nKalori: Yaklaşık $calories kcal";
           _loading = false;
         });
       } catch (e) {
         print("Supabase'den kalori çekilirken hata: $e");
         setState(() {
           _result =
-              "Yemek: ${predictedLabel.replaceAll('_', ' ')}\nKalori bilgisi bulunamadı.";
+              "Yemek: ${predictedLabel.replaceAll('_', ' ')}\n(Kalori bilgisi bulunamadı)";
           _loading = false;
         });
       }
-      // === SUPABASE KODUNUN SONU ===
     } else {
       setState(() {
         _result = "Yemek tanınamadı.";
