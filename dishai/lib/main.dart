@@ -50,13 +50,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   File? _image;
   bool _loading = false;
-  String? _result;
+  String? _calorieResult;
   Interpreter? _interpreter;
   List<String>? _labels;
   bool _modelLoaded = false;
 
   List<Map<String, dynamic>>? _predictions;
-  String? _predictedLabel;
   String? _initialPredictionLabel;
 
   final _correctionController = TextEditingController();
@@ -88,11 +87,11 @@ class _HomePageState extends State<HomePage> {
         _modelLoaded = true;
       });
       print(
-          'Model ve etiketler başarıyla yüklendi. Etiket sayısı: ${_labels?.length}');
+          'Model v4 ve etiketler başarıyla yüklendi. Etiket sayısı: ${_labels?.length}');
     } catch (e) {
       print('!!!!!!!! MODEL YÜKLENİRKEN HATA OLUŞTU: $e !!!!!!!!!!');
       setState(() {
-        _result = "Model yüklenemedi.\nLütfen uygulamayı yeniden başlatın.";
+        _calorieResult = "Model yüklenemedi.";
       });
     }
   }
@@ -100,9 +99,8 @@ class _HomePageState extends State<HomePage> {
   void _resetState() {
     setState(() {
       _image = null;
-      _result = null;
+      _calorieResult = null;
       _predictions = null;
-      _predictedLabel = null;
       _initialPredictionLabel = null;
       _loading = false;
       _showCorrectionUI = false;
@@ -119,7 +117,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _image = File(pickedFile.path);
         _loading = true;
-        _result = '';
+        _calorieResult = '';
       });
       _runInference(File(pickedFile.path));
     }
@@ -127,6 +125,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _runInference(File imageFile) async {
     if (!_modelLoaded || _interpreter == null || _labels == null) return;
+
     final imageData = await imageFile.readAsBytes();
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return;
@@ -136,11 +135,14 @@ class _HomePageState extends State<HomePage> {
     var buffer = Float32List(1 * 224 * 224 * 3);
     var bufferIndex = 0;
     for (var i = 0; i < imageBytes.length; i++) {
+      // ***** DÜZELTME BURADA! *****
+      // Senin orijinal, doğru koduna geri dönüldü.
       buffer[bufferIndex++] = imageBytes[i].toDouble();
     }
     var input = buffer.reshape([1, 224, 224, 3]);
     var output =
         List.filled(1 * _labels!.length, 0.0).reshape([1, _labels!.length]);
+
     _interpreter!.run(input, output);
 
     List<Map<String, dynamic>> predictions = [];
@@ -157,26 +159,22 @@ class _HomePageState extends State<HomePage> {
       }
     });
 
-    await _showPrediction();
+    await _fetchCalorieInfo();
   }
 
-  Future<void> _showPrediction() async {
+  Future<void> _fetchCalorieInfo() async {
     if (_predictions == null || _predictions!.isEmpty) {
       setState(() {
-        _result =
-            "Model başka tahmin bulamadı.\nLütfen doğru yemeği siz girin:";
+        _calorieResult = "Tahmin yapılamadı.";
         _showCorrectionUI = true;
         _loading = false;
       });
       return;
     }
+
     final bestPrediction = _predictions!.first;
     final predictedLabel = bestPrediction['label'] as String;
-    setState(() {
-      _predictedLabel = predictedLabel;
-      _loading = true;
-      _result = '';
-    });
+
     try {
       final response = await supabase
           .from('foods')
@@ -184,22 +182,24 @@ class _HomePageState extends State<HomePage> {
           .eq('name', predictedLabel)
           .single();
       final calories = response['calories_per_portion'];
-      final foodName = predictedLabel
-          .replaceAll('_', ' ')
-          .split(' ')
-          .map((word) => word[0].toUpperCase() + word.substring(1))
-          .join(' ');
       setState(() {
-        _result = "Yemek: $foodName\nKalori: Yaklaşık $calories kcal";
+        _calorieResult = "Yaklaşık $calories kcal";
         _loading = false;
       });
     } catch (e) {
       setState(() {
-        _result =
-            "Yemek: ${predictedLabel.replaceAll('_', ' ')}\n(Kalori bilgisi bulunamadı)";
+        _calorieResult = "Kalori bilgisi bulunamadı";
         _loading = false;
       });
     }
+  }
+
+  Future<void> _handleIncorrectPrediction() {
+    return Future.sync(() {
+      setState(() {
+        _showCorrectionUI = true;
+      });
+    });
   }
 
   Future<void> _submitCorrection() async {
@@ -218,16 +218,13 @@ class _HomePageState extends State<HomePage> {
       final fileName = '${uuid.v4()}.$fileExt';
       final filePath = fileName;
 
-      // 1. Resmi Supabase Storage'a yükle (KOVA ADI DÜZELTİLDİ)
       await supabase.storage.from('user-corrections').uploadBinary(
           filePath, imageBytes,
           fileOptions: FileOptions(contentType: 'image/$fileExt'));
 
-      // 2. Yüklenen resmin URL'sini al (KOVA ADI DÜZELTİLDİ)
       final imageUrl =
           supabase.storage.from('user-corrections').getPublicUrl(filePath);
 
-      // 3. Düzeltme verisini Supabase veritabanına kaydet
       await supabase.from('user_corrections').insert({
         'image_url': imageUrl,
         'user_provided_label': _correctionController.text
@@ -282,56 +279,95 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 20),
                     if (_loading)
                       const CircularProgressIndicator()
-                    else if (_result != null && _result!.isNotEmpty)
-                      Text(_result!,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center),
-                    if (!_loading &&
-                        !_showCorrectionUI &&
-                        _predictions != null &&
-                        _predictions!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 30.0),
-                        child: Column(
-                          children: [
-                            Text('Tahmin doğru mu?',
-                                style: TextStyle(
-                                    fontSize: 18, color: Colors.grey[700])),
-                            const SizedBox(height: 15),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                    onPressed: () => _resetState(),
-                                    icon:
-                                        const Icon(Icons.check_circle_outline),
-                                    label: const Text('Doğru'),
+                    else if (_predictions != null && !_showCorrectionUI)
+                      Card(
+                        elevation: 4.0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                (_predictions!.first['label'] as String)
+                                    .replaceAll('_', ' ')
+                                    .split(' ')
+                                    .map((word) =>
+                                        word[0].toUpperCase() +
+                                        word.substring(1))
+                                    .join(' '),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _calorieResult ?? '',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(color: Colors.grey[700]),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton.icon(
+                                      onPressed: () => _resetState(),
+                                      icon: const Icon(
+                                          Icons.check_circle_outline),
+                                      label: const Text('Doğru'),
+                                      style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white)),
+                                  const SizedBox(width: 20),
+                                  ElevatedButton.icon(
+                                    onPressed: _handleIncorrectPrediction,
+                                    icon: const Icon(Icons.cancel_outlined),
+                                    label: const Text('Yanlış'),
                                     style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white)),
-                                const SizedBox(width: 20),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    if (_predictions != null &&
-                                        _predictions!.isNotEmpty) {
-                                      setState(() {
-                                        _predictions!.removeAt(0);
-                                      });
-                                    }
-                                    _showPrediction();
-                                  },
-                                  icon: const Icon(Icons.cancel_outlined),
-                                  label: const Text('Yanlış'),
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      foregroundColor: Colors.white),
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              if (_predictions!.length > 1) ...[
+                                const SizedBox(height: 24),
+                                const Divider(),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Diğer Olasılıklar',
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                  textAlign: TextAlign.center,
                                 ),
-                              ],
-                            ),
-                          ],
+                                const SizedBox(height: 8),
+                                ..._predictions!.skip(1).take(2).map((p) {
+                                  final label = (p['label'] as String)
+                                      .replaceAll('_', ' ')
+                                      .split(' ')
+                                      .map((word) =>
+                                          word[0].toUpperCase() +
+                                          word.substring(1))
+                                      .join(' ');
+                                  final score = (p['score'] as double) * 100;
+                                  return ListTile(
+                                    title: Text(label),
+                                    trailing: Text(
+                                      '${score.toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  );
+                                }).toList(),
+                              ]
+                            ],
+                          ),
                         ),
                       ),
                     if (_showCorrectionUI)
@@ -339,6 +375,10 @@ class _HomePageState extends State<HomePage> {
                         padding: const EdgeInsets.only(top: 20.0),
                         child: Column(
                           children: [
+                            Text(_predictions == null
+                                ? "Lütfen doğru yemeğin adını girin:"
+                                : "Modelin tahmini yanlıştı.\nDoğru yemeğin adını girerek bize yardımcı olabilirsiniz:"),
+                            const SizedBox(height: 15),
                             TextField(
                                 controller: _correctionController,
                                 decoration: const InputDecoration(
