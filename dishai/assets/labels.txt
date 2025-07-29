@@ -1,6 +1,16 @@
+cig_kofte
+et_doner
 iskender_kebap
 karniyarik
+kofte
 kunefe
+kuru_fasulye
 lahmacun
 manti
+mercimek_corbasi
+pide
+simit
+sucuklu_yumurta
+sutlac
 tavuk_doner
+yaprak_sarma
