@@ -135,8 +135,6 @@ class _HomePageState extends State<HomePage> {
     var buffer = Float32List(1 * 224 * 224 * 3);
     var bufferIndex = 0;
     for (var i = 0; i < imageBytes.length; i++) {
-      // ***** DÜZELTME BURADA! *****
-      // Senin orijinal, doğru koduna geri dönüldü.
       buffer[bufferIndex++] = imageBytes[i].toDouble();
     }
     var input = buffer.reshape([1, 224, 224, 3]);
@@ -199,6 +197,17 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _showCorrectionUI = true;
       });
+    });
+  }
+
+  void _promotePrediction(Map<String, dynamic> selectedPrediction) {
+    if (_predictions == null) return;
+
+    setState(() {
+      _loading = true;
+      _predictions!.remove(selectedPrediction);
+      _predictions!.insert(0, selectedPrediction);
+      _fetchCalorieInfo();
     });
   }
 
@@ -265,7 +274,8 @@ class _HomePageState extends State<HomePage> {
             )
           : Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                // DEĞİŞİKLİK BURADA
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 96.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
@@ -355,13 +365,16 @@ class _HomePageState extends State<HomePage> {
                                           word.substring(1))
                                       .join(' ');
                                   final score = (p['score'] as double) * 100;
-                                  return ListTile(
-                                    title: Text(label),
-                                    trailing: Text(
-                                      '${score.toStringAsFixed(1)}%',
-                                      style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontWeight: FontWeight.bold),
+                                  return InkWell(
+                                    onTap: () => _promotePrediction(p),
+                                    child: ListTile(
+                                      title: Text(label),
+                                      trailing: Text(
+                                        '${score.toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontWeight: FontWeight.bold),
+                                      ),
                                     ),
                                   );
                                 }).toList(),
@@ -370,6 +383,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
+
                     if (_showCorrectionUI)
                       Padding(
                         padding: const EdgeInsets.only(top: 20.0),
@@ -404,7 +418,9 @@ class _HomePageState extends State<HomePage> {
                                   )
                           ],
                         ),
-                      )
+                      ),
+
+                    // Önceki SizedBox buradan kaldırıldı, çünkü görevini padding'e devretti.
                   ],
                 ),
               ),
