@@ -1,5 +1,11 @@
+adana_kebap
+baklava
+biber_dolmasi
+bulgur_pilavi
 cig_kofte
 et_doner
+hamsi_tava
+icli_kofte
 iskender_kebap
 karniyarik
 kofte
@@ -7,9 +13,12 @@ kunefe
 kuru_fasulye
 lahmacun
 manti
+menemen
 mercimek_corbasi
 pide
+pirinc_pilavi
 simit
+su_boregi
 sucuklu_yumurta
 sutlac
 tavuk_doner
