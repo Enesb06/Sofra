@@ -1,5 +1,4 @@
-// lib/screens/recognition_page.dart
-
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,10 +7,45 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
-import 'package:uuid/uuid.dart';
+
+import '../models/food_details.dart';
+import '../widgets/typing_indicator.dart';
+import '../widgets/typewriter_chat_message.dart';
 
 final supabase = Supabase.instance.client;
-const uuid = Uuid();
+
+// --- CHAT MESAJ MODELLERİ ---
+abstract class ChatMessage {
+  final bool isFromUser;
+  ChatMessage(this.isFromUser);
+}
+
+class UserTextMessage extends ChatMessage {
+  final String text;
+  UserTextMessage(this.text) : super(true);
+}
+
+class StreamingTextMessage extends ChatMessage {
+  final String text;
+  final VoidCallback onFinished;
+  StreamingTextMessage(this.text, {required this.onFinished}) : super(false);
+}
+
+class ButtonOptionsMessage extends ChatMessage {
+  final List<ChatButtonOption> options;
+  ButtonOptionsMessage(this.options) : super(false);
+}
+
+class ChatButtonOption {
+  final String text;
+  final VoidCallback onPressed;
+  ChatButtonOption({required this.text, required this.onPressed});
+}
+
+class TypingIndicatorMessage extends ChatMessage {
+  TypingIndicatorMessage() : super(false);
+}
+
 
 class RecognitionPage extends StatefulWidget {
   const RecognitionPage({super.key});
@@ -21,17 +55,17 @@ class RecognitionPage extends StatefulWidget {
 }
 
 class _RecognitionPageState extends State<RecognitionPage> {
+  // State değişkenleri
   File? _image;
   bool _loading = false;
-  String? _calorieResult;
   Interpreter? _interpreter;
   List<String>? _labels;
   bool _modelLoaded = false;
-  List<Map<String, dynamic>>? _predictions;
-  String? _initialPredictionLabel;
-  final _correctionController = TextEditingController();
-  bool _showCorrectionUI = false;
-  bool _isUploadingCorrection = false;
+  FoodDetails? _currentFood;
+  final List<ChatMessage> _chatMessages = [];
+  bool _isChatActive = false;
+  final ScrollController _scrollController = ScrollController();
+  bool _isBotTyping = false;
 
   @override
   void initState() {
@@ -41,335 +75,346 @@ class _RecognitionPageState extends State<RecognitionPage> {
 
   @override
   void dispose() {
-    _correctionController.dispose();
     _interpreter?.close();
+    _scrollController.dispose();
     super.dispose();
   }
-
+  
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('assets/model.tflite');
       final labelsData = await rootBundle.loadString('assets/labels.txt');
-      _labels = labelsData
-          .split('\n')
-          .map((label) => label.trim())
-          .where((label) => label.isNotEmpty)
-          .toList();
+      _labels = labelsData.split('\n').map((label) => label.trim()).where((label) => label.isNotEmpty).toList();
       if (mounted) setState(() => _modelLoaded = true);
-      print(
-          'Model ve etiketler başarıyla yüklendi. Etiket sayısı: ${_labels?.length}');
     } catch (e) {
       print('!!!!!!!! MODEL YÜKLENİRKEN HATA OLUŞTU: $e !!!!!!!!!!');
-      if (mounted) setState(() => _calorieResult = "Model yüklenemedi.");
     }
   }
 
   void _resetState() => setState(() {
-        _image = null;
-        _calorieResult = null;
-        _predictions = null;
-        _initialPredictionLabel = null;
-        _loading = false;
-        _showCorrectionUI = false;
-        _isUploadingCorrection = false;
-        _correctionController.clear();
-      });
+    _image = null;
+    _loading = false;
+    _isChatActive = false;
+    _chatMessages.clear();
+    _currentFood = null;
+    _isBotTyping = false;
+  });
 
   Future<void> _pickImage() async {
     _resetState();
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
         _loading = true;
-        _calorieResult = '';
       });
-      _runInference(File(pickedFile.path));
+      await _runInference(File(pickedFile.path));
     }
   }
 
   Future<void> _runInference(File imageFile) async {
     if (!_modelLoaded || _interpreter == null || _labels == null) return;
+    
     final imageData = await imageFile.readAsBytes();
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return;
 
-    img.Image resizedImage =
-        img.copyResize(originalImage, width: 224, height: 224);
+    img.Image resizedImage = img.copyResize(originalImage, width: 224, height: 224);
     var imageBytes = resizedImage.getBytes(order: img.ChannelOrder.rgb);
     var buffer = Float32List(1 * 224 * 224 * 3);
     for (var i = 0, bufferIndex = 0; i < imageBytes.length; i++) {
       buffer[bufferIndex++] = imageBytes[i].toDouble();
     }
     var input = buffer.reshape([1, 224, 224, 3]);
-    var output =
-        List.filled(1 * _labels!.length, 0.0).reshape([1, _labels!.length]);
+    var output = List.filled(1 * _labels!.length, 0.0).reshape([1, _labels!.length]);
     _interpreter!.run(input, output);
 
-    List<Map<String, dynamic>> predictions = [];
+    double highestScore = 0.0;
+    String predictedLabel = '';
     for (int i = 0; i < output[0].length; i++) {
-      predictions.add({"label": _labels![i], "score": output[0][i]});
+      if (output[0][i] > highestScore) {
+        highestScore = output[0][i];
+        predictedLabel = _labels![i];
+      }
     }
-    predictions
-        .sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
 
-    if (mounted) {
-      setState(() {
-        _predictions = predictions;
-        if (predictions.isNotEmpty)
-          _initialPredictionLabel = predictions.first['label'];
-      });
-      await _fetchCalorieInfo();
+    if (predictedLabel.isNotEmpty) {
+      await _startChatbotFlow(predictedLabel);
+    } else {
+      _addBotMessage("Sorry, I couldn't recognize this dish. Please try another photo.");
     }
   }
 
-  Future<void> _fetchCalorieInfo() async {
-    if (_predictions == null || _predictions!.isEmpty) {
-      if (mounted)
-        setState(() {
-          _calorieResult = "Tahmin yapılamadı.";
-          _showCorrectionUI = true;
-          _loading = false;
-        });
-      return;
-    }
-    final predictedLabel = _predictions!.first['label'] as String;
+  Future<FoodDetails> _fetchFoodDetails(String foodName) async {
+    final response = await supabase
+        .from('foods')
+        .select()
+        .eq('name', foodName)
+        .single();
+    return FoodDetails.fromJson(response);
+  }
+
+
+  // --- CHATBOT AKIŞ MANTIĞI ---
+
+  Future<void> _startChatbotFlow(String foodName) async {
     try {
-      final response = await supabase
-          .from('foods')
-          .select('calories_per_portion')
-          .eq('name', predictedLabel)
-          .single();
-      if (mounted)
-        setState(() {
-          _calorieResult = "Yaklaşık ${response['calories_per_portion']} kcal";
-          _loading = false;
-        });
+      final foodDetails = await _fetchFoodDetails(foodName);
+      setState(() {
+        _currentFood = foodDetails;
+        _isChatActive = true;
+        _loading = false;
+      });
+      _addBotMessage(
+        "It looks like you're having ${_currentFood!.englishName}! What would you like to know?",
+        onFinished: _showMainOptions,
+      );
     } catch (e) {
-      if (mounted)
-        setState(() {
-          _calorieResult = "Kalori bilgisi bulunamadı";
-          _loading = false;
-        });
+      _addBotMessage("I recognized it as '$foodName', but I couldn't find its details. We are constantly updating!");
     }
   }
 
-  void _handleIncorrectPrediction() => setState(() => _showCorrectionUI = true);
+  void _showMainOptions() {
+     setState(() {
+       _isBotTyping = false;
+       _chatMessages.add(
+         ButtonOptionsMessage([
+           ChatButtonOption(text: '📖 Story & Origin', onPressed: () => _handleOptionSelection(_showStory, 'Tell me its story')),
+           ChatButtonOption(text: '🥩 Ingredients & Allergens', onPressed: () => _handleOptionSelection(_showIngredients, 'What are the ingredients & allergens?')),
+           ChatButtonOption(text: '🗣️ How to Pronounce?', onPressed: () => _handleOptionSelection(_showPronunciation, 'How do I pronounce it?')),
+           ChatButtonOption(text: '🍷 What goes with it?', onPressed: () => _handleOptionSelection(_showPairing, 'What goes well with it?')),
+         ])
+       );
+     });
+     _scrollToBottom();
+  }
 
-  void _promotePrediction(Map<String, dynamic> selectedPrediction) {
-    if (_predictions == null) return;
+  void _handleOptionSelection(Function showInfoFunction, String userText) {
     setState(() {
-      _loading = true;
-      _predictions!.remove(selectedPrediction);
-      _predictions!.insert(0, selectedPrediction);
-      _fetchCalorieInfo();
+      _chatMessages.add(UserTextMessage(userText));
+    });
+    _scrollToBottom();
+    
+    setState(() {
+      _isBotTyping = true;
+      _chatMessages.add(TypingIndicatorMessage());
+    });
+    _scrollToBottom();
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      setState(() {
+        _chatMessages.removeWhere((msg) => msg is TypingIndicatorMessage);
+        showInfoFunction();
+      });
+      _scrollToBottom();
     });
   }
 
-  Future<void> _submitCorrection() async {
-    if (_correctionController.text.trim().isEmpty || _image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Lütfen yemeğin adını girin.'),
-          backgroundColor: Colors.red));
-      return;
-    }
-    setState(() => _isUploadingCorrection = true);
-    try {
-      final imageBytes = await _image!.readAsBytes();
-      final fileExt = _image!.path.split('.').last;
-      final fileName = '${uuid.v4()}.$fileExt';
-      await supabase.storage.from('user-corrections').uploadBinary(
-          fileName, imageBytes,
-          fileOptions: FileOptions(contentType: 'image/$fileExt'));
-      final imageUrl =
-          supabase.storage.from('user-corrections').getPublicUrl(fileName);
-      await supabase.from('user_corrections').insert({
-        'image_url': imageUrl,
-        'user_provided_label': _correctionController.text
-            .trim()
-            .toLowerCase()
-            .replaceAll(' ', '_'),
-        'model_prediction': _initialPredictionLabel,
+  void _askForMoreInfo() {
+    _addBotMessage(
+      "What else would you like to know?",
+      onFinished: _showMainOptions,
+    );
+  }
+
+  void _addBotMessage(String text, {VoidCallback? onFinished}) {
+    if(text.isEmpty) text = "Sorry, I don't have this information yet.";
+    
+    setState(() {
+      _isBotTyping = true;
+      _chatMessages.add(StreamingTextMessage(text, onFinished: onFinished ?? () => setState(() => _isBotTyping = false)));
+    });
+  }
+
+  void _showStory() => _addBotMessage(_currentFood?.storyEn ?? '', onFinished: _askForMoreInfo);
+  
+  void _showIngredients() {
+    if (_currentFood == null) return;
+    
+    final ingredients = "📋 Ingredients:\n${_currentFood!.ingredientsEn ?? 'Not available.'}";
+    final spiceLevel = "\n\n🔥 Spice Level:\n${_generateSpiceLevelText(_currentFood!.spiceLevel)}";
+    final allergens = "\n\n⚠️ Allergen Info:\n${_generateAllergenText(_currentFood!)}";
+    final vegetarianStatus = _currentFood!.isVegetarian ? "\n\n🌱 This dish is vegetarian." : "";
+
+    final fullText = ingredients + spiceLevel + allergens + vegetarianStatus;
+    _addBotMessage(fullText.trim(), onFinished: _askForMoreInfo);
+  }
+
+  void _showPronunciation() => _addBotMessage(_currentFood?.pronunciationText ?? '', onFinished: _askForMoreInfo);
+  void _showPairing() => _addBotMessage(_currentFood?.pairingEn ?? '', onFinished: _askForMoreInfo);
+
+  // <-- DÜZELTİLMİŞ FONKSİYON -->
+  void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
+
+    const scrollTolerance = 50.0;
+    // Hata buradaydı: 'final-' yerine 'final ' olmalı.
+    final currentPosition = _scrollController.position.pixels;
+    final maxPosition = _scrollController.position.maxScrollExtent;
+
+    if ((maxPosition - currentPosition) < scrollTolerance) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Değerli geri bildiriminiz kaydedildi. Teşekkürler!'),
-          backgroundColor: Colors.green));
-    } catch (e) {
-      print("Düzeltme gönderilirken hata oluştu: $e");
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Bir hata oluştu, düzeltme gönderilemedi.'),
-          backgroundColor: Colors.red));
-    } finally {
-      _resetState();
     }
   }
+
+  String _generateSpiceLevelText(int? level) {
+    if (level == null) return "Unknown";
+    switch (level) {
+      case 1: return "🌶️ (Not Spicy)";
+      case 2: return "🌶️🌶️ (Mild)";
+      case 3: return "🌶️🌶️🌶️ (Medium)";
+      case 4: return "🌶️🌶️🌶️🌶️ (Spicy)";
+      case 5: return "🌶️🌶️🌶️🌶️🌶️ (Very Spicy)";
+      default: return "Not specified";
+    }
+  }
+
+  String _generateAllergenText(FoodDetails food) {
+    List<String> allergens = [];
+    if (food.containsGluten) allergens.add("Gluten");
+    if (food.containsDairy) allergens.add("Dairy");
+    if (food.containsNuts) allergens.add("Nuts");
+
+    if (allergens.isEmpty) {
+      return "No major allergens specified.";
+    } else {
+      return "Contains: ${allergens.join(', ')}.";
+    }
+  }
+
+
+  // --- BUILD METODU VE YARDIMCI WIDGET'LAR ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('DishAI - Lezzet Tanıyıcı'),
-          backgroundColor: Colors.deepOrange.shade300),
+        title: const Text('DishAI - Gastronomy Envoy'),
+        backgroundColor: Colors.deepOrange.shade300,
+        actions: [
+          if (_image != null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _resetState,
+              tooltip: 'Start Over',
+            )
+        ],
+      ),
       body: !_modelLoaded
-          ? const Center(
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 15),
-                  Text("Model Yükleniyor...")
-                ]))
-          : Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 96.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    if (_image == null)
-                      const Text('Lütfen bir yemek fotoğrafı seçin.')
-                    else
-                      ClipRRect(
-                          borderRadius: BorderRadius.circular(12.0),
-                          child: Image.file(_image!,
-                              height: 250, width: 250, fit: BoxFit.cover)),
-                    const SizedBox(height: 20),
-                    if (_loading)
-                      const CircularProgressIndicator()
-                    else if (_predictions != null && !_showCorrectionUI)
-                      Card(
-                        elevation: 4.0,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                _predictions!.first['label']
-                                    .toString()
-                                    .replaceAll('_', ' ')
-                                    .split(' ')
-                                    .map((word) => word.isNotEmpty
-                                        ? word[0].toUpperCase() +
-                                            word.substring(1)
-                                        : '')
-                                    .join(' '),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(_calorieResult ?? '',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(color: Colors.grey[700]),
-                                  textAlign: TextAlign.center),
-                              const SizedBox(height: 20),
-                              Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    ElevatedButton.icon(
-                                        onPressed: _resetState,
-                                        icon: const Icon(
-                                            Icons.check_circle_outline),
-                                        label: const Text('Doğru'),
-                                        style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            foregroundColor: Colors.white)),
-                                    const SizedBox(width: 20),
-                                    ElevatedButton.icon(
-                                        onPressed: _handleIncorrectPrediction,
-                                        icon: const Icon(Icons.cancel_outlined),
-                                        label: const Text('Yanlış'),
-                                        style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            foregroundColor: Colors.white)),
-                                  ]),
-                              if (_predictions!.length > 1) ...[
-                                const SizedBox(height: 24),
-                                const Divider(),
-                                const SizedBox(height: 12),
-                                Text('Diğer Olasılıklar',
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
-                                    textAlign: TextAlign.center),
-                                const SizedBox(height: 8),
-                                ..._predictions!.skip(1).take(2).map((p) {
-                                  final label = p['label']
-                                      .toString()
-                                      .replaceAll('_', ' ')
-                                      .split(' ')
-                                      .map((word) => word.isNotEmpty
-                                          ? word[0].toUpperCase() +
-                                              word.substring(1)
-                                          : '')
-                                      .join(' ');
-                                  final score = (p['score'] as double) * 100;
-                                  return InkWell(
-                                    onTap: () => _promotePrediction(p),
-                                    child: ListTile(
-                                        title: Text(label),
-                                        trailing: Text(
-                                            '${score.toStringAsFixed(1)}%',
-                                            style: TextStyle(
-                                                color: Colors.grey[600],
-                                                fontWeight: FontWeight.bold))),
-                                  );
-                                }).toList(),
-                              ]
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (_showCorrectionUI)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20.0),
-                        child: Column(children: [
-                          Text(_predictions == null
-                              ? "Lütfen doğru yemeğin adını girin:"
-                              : "Modelin tahmini yanlıştı.\nDoğru yemeğin adını girerek bize yardımcı olabilirsiniz:"),
-                          const SizedBox(height: 15),
-                          TextField(
-                              controller: _correctionController,
-                              decoration: const InputDecoration(
-                                  labelText: 'Doğru Yemek Adı',
-                                  border: OutlineInputBorder(),
-                                  hintText: 'Örn: Adana Kebap')),
-                          const SizedBox(height: 15),
-                          _isUploadingCorrection
-                              ? const CircularProgressIndicator()
-                              : ElevatedButton.icon(
-                                  onPressed: _submitCorrection,
-                                  icon: const Icon(Icons.send),
-                                  label: const Text('Geri Bildirimi Gönder'),
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Theme.of(context).colorScheme.primary,
-                                      foregroundColor: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 24, vertical: 12)),
-                                )
-                        ]),
-                      ),
-                  ],
-                ),
-              ),
+          ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 15), Text("Envoy is getting ready...")],),)
+          : Column(
+              children: [
+                if (_image != null) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover)),),
+                if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
+                if (!_isChatActive && !_loading && _image == null) const Expanded(child: Center(child: Text('Let\'s identify your dish!\nClick the camera button below.', textAlign: TextAlign.center, style: TextStyle(fontSize: 18),),),),
+                if (_isChatActive)
+                  Expanded(
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: _chatMessages.length,
+                      itemBuilder: (context, index) {
+                        final message = _chatMessages[index];
+                        if (message.isFromUser) {
+                           return _buildUserMessage(message as UserTextMessage);
+                        } else {
+                           return _buildBotMessage(message);
+                        }
+                      },
+                    ),
+                  ),
+              ],
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            (_modelLoaded && !_isUploadingCorrection) ? _pickImage : null,
-        tooltip: 'Fotoğraf Seç',
-        backgroundColor: (_modelLoaded && !_isUploadingCorrection)
-            ? Colors.deepOrange
-            : Colors.grey,
+        onPressed: (_modelLoaded && !_loading) ? _pickImage : null,
+        tooltip: 'Select Photo',
+        backgroundColor: (_modelLoaded && !_loading) ? Colors.deepOrange : Colors.grey,
         child: const Icon(Icons.camera_alt),
+      ),
+    );
+  }
+
+  Widget _buildUserMessage(UserTextMessage message) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 4).copyWith(left: 60),
+        decoration: BoxDecoration(
+          color: Colors.deepOrange.shade400,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(message.text, style: const TextStyle(fontSize: 16, color: Colors.white)),
+      ),
+    );
+  }
+  
+  Widget _buildBotMessage(ChatMessage message) {
+    Widget messageContent;
+    
+    if (message is StreamingTextMessage) {
+      messageContent = TypewriterChatMessage(
+        text: message.text,
+        onCharacterTyped: _scrollToBottom,
+        onFinishedTyping: message.onFinished,
+      );
+    } else if (message is ButtonOptionsMessage) {
+      messageContent = _buildButtonOptions(message);
+    } else if (message is TypingIndicatorMessage) {
+      messageContent = const AnimatedTypingIndicator();
+    } else {
+      messageContent = const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CircleAvatar(
+            backgroundColor: Colors.grey,
+            child: Icon(Icons.ramen_dining_outlined, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: messageContent),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildButtonOptions(ButtonOptionsMessage message) {
+    return AbsorbPointer(
+      absorbing: _isBotTyping,
+      child: Opacity(
+        opacity: _isBotTyping ? 0.5 : 1.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: message.options.map((option) => Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(vertical: 4.0),
+            child: OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _chatMessages.remove(message);
+                });
+                option.onPressed();
+              },
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.deepOrange.shade300),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Text(option.text, style: TextStyle(color: Colors.deepOrange.shade800, fontWeight: FontWeight.bold)),
+            ),
+          )).toList(),
+        ),
       ),
     );
   }

@@ -1,9 +1,9 @@
-// lib/screens/splash_screen.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'lezzet_haritasi_page.dart'; // YENİ YÖNLENDİRME
+
+// 1. DEĞİŞİKLİK: Eski sayfayı değil, tanıma sayfasını içeri aktar.
+import 'recognition_page.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,7 +19,8 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(
       const Duration(seconds: 3),
       () => Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LezzetHaritasiPage()),
+        // 2. DEĞİŞİKLİK: LezzetHaritasiPage yerine RecognitionPage'e yönlendir.
+        MaterialPageRoute(builder: (context) => const RecognitionPage()),
       ),
     );
   }
@@ -33,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.travel_explore_rounded, // İkonu güncelledim
+              Icons.ramen_dining_outlined, // İkonu güncelledim
               size: 100.0,
               color: Colors.deepOrange.shade800,
             ),
@@ -48,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Türkiye\'nin Lezzet Atlası', // Metni güncelledim
+              'Your Personal Turkish Gastronomy Envoy', // Metni güncelledim
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 color: Colors.grey.shade700,
