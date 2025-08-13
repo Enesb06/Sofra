@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// 1. DEĞİŞİKLİK: Eski sayfayı değil, tanıma sayfasını içeri aktar.
-import 'recognition_page.dart'; 
+// 1. DEĞİŞİKLİK: RecognitionPage yerine yeni ana iskeletimiz olan HomePage'i import ediyoruz.
+import 'home_page.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,14 +19,17 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(
       const Duration(seconds: 3),
       () => Navigator.of(context).pushReplacement(
-        // 2. DEĞİŞİKLİK: LezzetHaritasiPage yerine RecognitionPage'e yönlendir.
-        MaterialPageRoute(builder: (context) => const RecognitionPage()),
+        // 2. DEĞİŞİKLİK: Uygulamayı artık tek bir sayfaya değil, 
+        // BottomNavigationBar içeren HomePage'e yönlendiriyoruz.
+        MaterialPageRoute(builder: (context) => const HomePage()),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // BU KISIMDA HİÇBİR DEĞİŞİKLİK YOK.
+    // MEVCUT GÜZEL TASARIMINIZ OLDUĞU GİBİ KALIYOR.
     return Scaffold(
       backgroundColor: Colors.deepOrange.shade100,
       body: Center(
@@ -34,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.ramen_dining_outlined, // İkonu güncelledim
+              Icons.ramen_dining_outlined,
               size: 100.0,
               color: Colors.deepOrange.shade800,
             ),
@@ -49,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your Personal Turkish Gastronomy Envoy', // Metni güncelledim
+              'Your Personal Turkish Gastronomy Envoy',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 color: Colors.grey.shade700,
