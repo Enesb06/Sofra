@@ -1,3 +1,5 @@
+// GÜNCELLENMİŞ TAM DOSYA: lib/recognition_page.dart
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -11,6 +13,7 @@ import 'package:image/image.dart' as img;
 import '../models/food_details.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/typewriter_chat_message.dart';
+import 'show_to_waiter_page.dart'; // <--- BU ŞEKİLDE GÜNCELLEYİN
 
 final supabase = Supabase.instance.client;
 
@@ -46,7 +49,6 @@ class TypingIndicatorMessage extends ChatMessage {
   TypingIndicatorMessage() : super(false);
 }
 
-
 class RecognitionPage extends StatefulWidget {
   const RecognitionPage({super.key});
 
@@ -55,7 +57,6 @@ class RecognitionPage extends StatefulWidget {
 }
 
 class _RecognitionPageState extends State<RecognitionPage> {
-  // State değişkenleri
   File? _image;
   bool _loading = false;
   Interpreter? _interpreter;
@@ -154,9 +155,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
     return FoodDetails.fromJson(response);
   }
 
-
-  // --- CHATBOT AKIŞ MANTIĞI ---
-
   Future<void> _startChatbotFlow(String foodName) async {
     try {
       final foodDetails = await _fetchFoodDetails(foodName);
@@ -174,11 +172,16 @@ class _RecognitionPageState extends State<RecognitionPage> {
     }
   }
 
+  // <--- DEĞİŞİKLİK: Yeni buton eklendi ---
   void _showMainOptions() {
      setState(() {
        _isBotTyping = false;
        _chatMessages.add(
          ButtonOptionsMessage([
+           ChatButtonOption(
+             text: '🛎️ Show to Waiter', 
+             onPressed: () => _handleOptionSelection(_navigateToWaiterCard, 'Show this to the waiter')
+           ),
            ChatButtonOption(text: '📖 Story & Origin', onPressed: () => _handleOptionSelection(_showStory, 'Tell me its story')),
            ChatButtonOption(text: '🥩 Ingredients & Allergens', onPressed: () => _handleOptionSelection(_showIngredients, 'What are the ingredients & allergens?')),
            ChatButtonOption(text: '🗣️ How to Pronounce?', onPressed: () => _handleOptionSelection(_showPronunciation, 'How do I pronounce it?')),
@@ -189,25 +192,33 @@ class _RecognitionPageState extends State<RecognitionPage> {
      _scrollToBottom();
   }
 
-  void _handleOptionSelection(Function showInfoFunction, String userText) {
+  // <--- DEĞİŞİKLİK: Fonksiyon gecikmeyi yönetecek şekilde güncellendi ---
+  void _handleOptionSelection(Function actionFunction, String userText) {
     setState(() {
       _chatMessages.add(UserTextMessage(userText));
     });
     _scrollToBottom();
     
-    setState(() {
-      _isBotTyping = true;
-      _chatMessages.add(TypingIndicatorMessage());
-    });
-    _scrollToBottom();
-
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // Eğer aksiyon, garson kartı değilse gecikme ekle ve yazma animasyonu göster
+    if (actionFunction != _navigateToWaiterCard) {
       setState(() {
-        _chatMessages.removeWhere((msg) => msg is TypingIndicatorMessage);
-        showInfoFunction();
+        _isBotTyping = true;
+        _chatMessages.add(TypingIndicatorMessage());
       });
       _scrollToBottom();
-    });
+
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (!mounted) return;
+        setState(() {
+          _chatMessages.removeWhere((msg) => msg is TypingIndicatorMessage);
+          actionFunction();
+        });
+        _scrollToBottom();
+      });
+    } else {
+      // Garson kartı ise, gecikme olmadan direkt çalıştır.
+      actionFunction();
+    }
   }
 
   void _askForMoreInfo() {
@@ -243,22 +254,41 @@ class _RecognitionPageState extends State<RecognitionPage> {
   void _showPronunciation() => _addBotMessage(_currentFood?.pronunciationText ?? '', onFinished: _askForMoreInfo);
   void _showPairing() => _addBotMessage(_currentFood?.pairingEn ?? '', onFinished: _askForMoreInfo);
 
-  // <-- DÜZELTİLMİŞ FONKSİYON -->
+  // <--- DEĞİŞİKLİK: Yeni navigasyon fonksiyonu eklendi ---
+  void _navigateToWaiterCard() {
+    if (_currentFood == null) return;
+
+    setState(() {
+      _chatMessages.removeWhere((msg) => msg is TypingIndicatorMessage);
+      _isBotTyping = false;
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShowToWaiterPage(food: _currentFood!),
+      ),
+    ).then((_) {
+      // Garson kartı ekranı kapatıldıktan sonra bu kod çalışır.
+      // Sohbet akışına devam etmek için ana seçenekleri tekrar soralım.
+      _askForMoreInfo();
+    });
+  }
+
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
-
     const scrollTolerance = 50.0;
-    // Hata buradaydı: 'final-' yerine 'final ' olmalı.
     final currentPosition = _scrollController.position.pixels;
     final maxPosition = _scrollController.position.maxScrollExtent;
-
     if ((maxPosition - currentPosition) < scrollTolerance) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
@@ -287,10 +317,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
       return "Contains: ${allergens.join(', ')}.";
     }
   }
-
-
-  // --- BUILD METODU VE YARDIMCI WIDGET'LAR ---
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,7 +325,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
         title: const Text('DishAI - Gastronomy Envoy'),
         backgroundColor: Colors.deepOrange.shade300,
         actions: [
-          if (_image != null)
+          if (_isChatActive)
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _resetState,
@@ -310,7 +337,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
           ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 15), Text("Envoy is getting ready...")],),)
           : Column(
               children: [
-                if (_image != null) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover)),),
+                if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover)),),
                 if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
                 if (!_isChatActive && !_loading && _image == null) const Expanded(child: Center(child: Text('Let\'s identify your dish!\nClick the camera button below.', textAlign: TextAlign.center, style: TextStyle(fontSize: 18),),),),
                 if (_isChatActive)

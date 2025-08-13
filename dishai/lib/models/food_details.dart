@@ -1,7 +1,10 @@
+// GÜNCELLENMİŞ DOSYA: lib/models/food_details.dart
+
 class FoodDetails {
   final String name;
   final String englishName;
   final String turkishName;
+  final String? imageUrl; // <--- GÜNCELLENDİ
   final String? storyEn;
   final String? ingredientsEn;
   final String? pronunciationText;
@@ -17,6 +20,7 @@ class FoodDetails {
     required this.name,
     required this.englishName,
     required this.turkishName,
+    this.imageUrl, // <--- GÜNCELLENDİ
     this.storyEn,
     this.ingredientsEn,
     this.pronunciationText,
@@ -34,6 +38,7 @@ class FoodDetails {
       name: json['name'],
       englishName: json['english_name'],
       turkishName: json['turkish_name'],
+      imageUrl: json['image_url'], // <--- GÜNCELLENDİ
       storyEn: json['story_en'],
       ingredientsEn: json['ingredients_en'],
       pronunciationText: json['pronunciation_text'],
