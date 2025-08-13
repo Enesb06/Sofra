@@ -1,8 +1,7 @@
-// GÜNCELLENMİŞ TAM DOSYA: lib/recognition_page.dart
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,43 +10,40 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
 import '../models/food_details.dart';
+import '../services/database_helper.dart'; // Yolu kontrol edin: lib/services/database_helper.dart
 import '../widgets/typing_indicator.dart';
 import '../widgets/typewriter_chat_message.dart';
-import 'show_to_waiter_page.dart'; // <--- BU ŞEKİLDE GÜNCELLEYİN
+import 'show_to_waiter_page.dart';
 
 final supabase = Supabase.instance.client;
 
-// --- CHAT MESAJ MODELLERİ ---
+// --- CHAT MESAJ MODELLERİ (DEĞİŞİKLİK YOK) ---
 abstract class ChatMessage {
   final bool isFromUser;
   ChatMessage(this.isFromUser);
 }
-
 class UserTextMessage extends ChatMessage {
   final String text;
   UserTextMessage(this.text) : super(true);
 }
-
 class StreamingTextMessage extends ChatMessage {
   final String text;
   final VoidCallback onFinished;
   StreamingTextMessage(this.text, {required this.onFinished}) : super(false);
 }
-
 class ButtonOptionsMessage extends ChatMessage {
   final List<ChatButtonOption> options;
   ButtonOptionsMessage(this.options) : super(false);
 }
-
 class ChatButtonOption {
   final String text;
   final VoidCallback onPressed;
   ChatButtonOption({required this.text, required this.onPressed});
 }
-
 class TypingIndicatorMessage extends ChatMessage {
   TypingIndicatorMessage() : super(false);
 }
+// ---
 
 class RecognitionPage extends StatefulWidget {
   const RecognitionPage({super.key});
@@ -57,6 +53,7 @@ class RecognitionPage extends StatefulWidget {
 }
 
 class _RecognitionPageState extends State<RecognitionPage> {
+  // --- MEVCUT STATE DEĞİŞKENLERİ (DEĞİŞİKLİK YOK) ---
   File? _image;
   bool _loading = false;
   Interpreter? _interpreter;
@@ -67,11 +64,55 @@ class _RecognitionPageState extends State<RecognitionPage> {
   bool _isChatActive = false;
   final ScrollController _scrollController = ScrollController();
   bool _isBotTyping = false;
+  
+  // --- YENİ STATE DEĞİŞKENLERİ (Çevrimdışı yetenek için) ---
+  bool _isSyncing = true; // Uygulama açılışında senkronizasyon başlasın
+  String _syncStatusMessage = "Envoy is getting ready...";
 
   @override
   void initState() {
     super.initState();
-    _loadModel();
+    _initialize();
+  }
+
+  // --- YENİ FONKSİYON: Başlatma işlemlerini yönetir ---
+  Future<void> _initialize() async {
+    // Model yükleme ve veri senkronizasyonunu aynı anda başlat
+    await Future.wait([
+      _loadModel(),
+      _syncDataWithSupabase()
+    ]);
+  }
+
+  // --- YENİ FONKSİYON: Supabase verilerini yerel DB'ye senkronize eder ---
+  Future<void> _syncDataWithSupabase() async {
+    setState(() {
+      _syncStatusMessage = "Connecting to knowledge base...";
+    });
+    try {
+      if (kDebugMode) print("Supabase'den veri çekiliyor...");
+      final response = await supabase.from('foods').select();
+      final foodList = (response as List)
+          .map((item) => FoodDetails.fromJson(item))
+          .toList();
+
+      if (foodList.isNotEmpty) {
+        setState(() {
+          _syncStatusMessage = "Syncing local gastronomy atlas...";
+        });
+        await DatabaseHelper.instance.batchUpsert(foodList);
+      }
+      if (kDebugMode) print("✅ Senkronizasyon tamamlandı. ${foodList.length} yemek yerel veritabanında.");
+
+    } catch (e) {
+      if (kDebugMode) print("❗️ Senkronizasyon sırasında HATA: $e");
+      // Hata olsa bile devam et, belki yerelde eski veri vardır.
+    } finally {
+      // İşlem bitince senkronizasyon modunu kapat
+      if (mounted) {
+        setState(() { _isSyncing = false; });
+      }
+    }
   }
 
   @override
@@ -88,10 +129,23 @@ class _RecognitionPageState extends State<RecognitionPage> {
       _labels = labelsData.split('\n').map((label) => label.trim()).where((label) => label.isNotEmpty).toList();
       if (mounted) setState(() => _modelLoaded = true);
     } catch (e) {
-      print('!!!!!!!! MODEL YÜKLENİRKEN HATA OLUŞTU: $e !!!!!!!!!!');
+      if (kDebugMode) print('❗️ MODEL YÜKLENİRKEN HATA OLUŞTU: $e');
     }
   }
 
+  // --- GÜNCELLENEN FONKSİYON: Artık yerel veritabanını kullanıyor ---
+  Future<FoodDetails> _fetchFoodDetails(String foodName) async {
+    final food = await DatabaseHelper.instance.getFoodByName(foodName);
+    if (food == null) {
+      // Eğer yemek yerel veritabanında bulunamazsa bu, senkronizasyonun başarısız olduğu anlamına gelir.
+      // Yine de kullanıcıya bir cevap vermek için hata fırlatmak yerine özel bir mesaj gösterelim.
+      throw Exception("Food '$foodName' not found in local database. Please ensure you have an internet connection on first launch to sync data.");
+    }
+    return food;
+  }
+  
+  // --- AŞAĞIDAKİ TÜM FONKSİYONLARDA MANTIK OLARAK HİÇBİR DEĞİŞİKLİK YOKTUR ---
+  
   void _resetState() => setState(() {
     _image = null;
     _loading = false;
@@ -146,15 +200,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
     }
   }
 
-  Future<FoodDetails> _fetchFoodDetails(String foodName) async {
-    final response = await supabase
-        .from('foods')
-        .select()
-        .eq('name', foodName)
-        .single();
-    return FoodDetails.fromJson(response);
-  }
-
   Future<void> _startChatbotFlow(String foodName) async {
     try {
       final foodDetails = await _fetchFoodDetails(foodName);
@@ -168,20 +213,18 @@ class _RecognitionPageState extends State<RecognitionPage> {
         onFinished: _showMainOptions,
       );
     } catch (e) {
-      _addBotMessage("I recognized it as '$foodName', but I couldn't find its details. We are constantly updating!");
+      if (kDebugMode) print("❗️_startChatbotFlow HATA: $e");
+      setState(() { _loading = false; });
+      _addBotMessage("I recognized it as '$foodName', but I couldn't find its details. Please check your internet connection and try again.");
     }
   }
-
-  // <--- DEĞİŞİKLİK: Yeni buton eklendi ---
+  
   void _showMainOptions() {
      setState(() {
        _isBotTyping = false;
        _chatMessages.add(
          ButtonOptionsMessage([
-           ChatButtonOption(
-             text: '🛎️ Show to Waiter', 
-             onPressed: () => _handleOptionSelection(_navigateToWaiterCard, 'Show this to the waiter')
-           ),
+           ChatButtonOption( text: '🛎️ Show to Waiter', onPressed: () => _handleOptionSelection(_navigateToWaiterCard, 'Show this to the waiter')),
            ChatButtonOption(text: '📖 Story & Origin', onPressed: () => _handleOptionSelection(_showStory, 'Tell me its story')),
            ChatButtonOption(text: '🥩 Ingredients & Allergens', onPressed: () => _handleOptionSelection(_showIngredients, 'What are the ingredients & allergens?')),
            ChatButtonOption(text: '🗣️ How to Pronounce?', onPressed: () => _handleOptionSelection(_showPronunciation, 'How do I pronounce it?')),
@@ -192,14 +235,12 @@ class _RecognitionPageState extends State<RecognitionPage> {
      _scrollToBottom();
   }
 
-  // <--- DEĞİŞİKLİK: Fonksiyon gecikmeyi yönetecek şekilde güncellendi ---
   void _handleOptionSelection(Function actionFunction, String userText) {
     setState(() {
       _chatMessages.add(UserTextMessage(userText));
     });
     _scrollToBottom();
     
-    // Eğer aksiyon, garson kartı değilse gecikme ekle ve yazma animasyonu göster
     if (actionFunction != _navigateToWaiterCard) {
       setState(() {
         _isBotTyping = true;
@@ -216,16 +257,12 @@ class _RecognitionPageState extends State<RecognitionPage> {
         _scrollToBottom();
       });
     } else {
-      // Garson kartı ise, gecikme olmadan direkt çalıştır.
       actionFunction();
     }
   }
 
   void _askForMoreInfo() {
-    _addBotMessage(
-      "What else would you like to know?",
-      onFinished: _showMainOptions,
-    );
+    _addBotMessage( "What else would you like to know?", onFinished: _showMainOptions );
   }
 
   void _addBotMessage(String text, {VoidCallback? onFinished}) {
@@ -254,7 +291,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
   void _showPronunciation() => _addBotMessage(_currentFood?.pronunciationText ?? '', onFinished: _askForMoreInfo);
   void _showPairing() => _addBotMessage(_currentFood?.pairingEn ?? '', onFinished: _askForMoreInfo);
 
-  // <--- DEĞİŞİKLİK: Yeni navigasyon fonksiyonu eklendi ---
   void _navigateToWaiterCard() {
     if (_currentFood == null) return;
 
@@ -269,8 +305,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
         builder: (context) => ShowToWaiterPage(food: _currentFood!),
       ),
     ).then((_) {
-      // Garson kartı ekranı kapatıldıktan sonra bu kod çalışır.
-      // Sohbet akışına devam etmek için ana seçenekleri tekrar soralım.
       _askForMoreInfo();
     });
   }
@@ -283,11 +317,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
     if ((maxPosition - currentPosition) < scrollTolerance) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+          _scrollController.animateTo( _scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
         }
       });
     }
@@ -310,16 +340,34 @@ class _RecognitionPageState extends State<RecognitionPage> {
     if (food.containsGluten) allergens.add("Gluten");
     if (food.containsDairy) allergens.add("Dairy");
     if (food.containsNuts) allergens.add("Nuts");
-
-    if (allergens.isEmpty) {
-      return "No major allergens specified.";
-    } else {
-      return "Contains: ${allergens.join(', ')}.";
-    }
+    return allergens.isEmpty ? "No major allergens specified." : "Contains: ${allergens.join(', ')}.";
   }
   
+  // --- GÜNCELLENEN WIDGET: Senkronizasyon durumu için yükleme ekranı eklendi ---
   @override
   Widget build(BuildContext context) {
+    if (!_modelLoaded || _isSyncing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('DishAI - Gastronomy Envoy'),
+          backgroundColor: Colors.deepOrange.shade300,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                _syncStatusMessage,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('DishAI - Gastronomy Envoy'),
@@ -333,41 +381,40 @@ class _RecognitionPageState extends State<RecognitionPage> {
             )
         ],
       ),
-      body: !_modelLoaded
-          ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 15), Text("Envoy is getting ready...")],),)
-          : Column(
-              children: [
-                if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover)),),
-                if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
-                if (!_isChatActive && !_loading && _image == null) const Expanded(child: Center(child: Text('Let\'s identify your dish!\nClick the camera button below.', textAlign: TextAlign.center, style: TextStyle(fontSize: 18),),),),
-                if (_isChatActive)
-                  Expanded(
-                    child: ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: _chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final message = _chatMessages[index];
-                        if (message.isFromUser) {
-                           return _buildUserMessage(message as UserTextMessage);
-                        } else {
-                           return _buildBotMessage(message);
-                        }
-                      },
-                    ),
-                  ),
-              ],
+      body: Column(
+        children: [
+          if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover))),
+          if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
+          if (!_isChatActive && !_loading && _image == null) const Expanded(child: Center(child: Text('Let\'s identify your dish!\nClick the camera button below.', textAlign: TextAlign.center, style: TextStyle(fontSize: 18),),),),
+          if (_isChatActive)
+            Expanded(
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _chatMessages.length,
+                itemBuilder: (context, index) {
+                  final message = _chatMessages[index];
+                  if (message.isFromUser) {
+                      return _buildUserMessage(message as UserTextMessage);
+                  } else {
+                      return _buildBotMessage(message);
+                  }
+                },
+              ),
             ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: (_modelLoaded && !_loading) ? _pickImage : null,
+        onPressed: (_modelLoaded && !_loading && !_isSyncing) ? _pickImage : null,
         tooltip: 'Select Photo',
-        backgroundColor: (_modelLoaded && !_loading) ? Colors.deepOrange : Colors.grey,
+        backgroundColor: (_modelLoaded && !_loading && !_isSyncing) ? Colors.deepOrange : Colors.grey,
         child: const Icon(Icons.camera_alt),
       ),
     );
   }
 
+  // --- BUILD HELPER WIDGETS (DEĞİŞİKLİK YOK) ---
   Widget _buildUserMessage(UserTextMessage message) {
     return Align(
       alignment: Alignment.centerRight,

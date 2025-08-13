@@ -1,7 +1,8 @@
-// YENİ DOSYA: lib/pages/show_to_waiter_page.dart
+// GÜNCELLENMİŞ DOSYA: lib/screens/show_to_waiter_page.dart
 
 import 'package:flutter/material.dart';
-import '../models/food_details.dart'; // Model dosyanızın yolunu kontrol edin
+import 'package:cached_network_image/cached_network_image.dart'; // <--- YENİ IMPORT
+import '../models/food_details.dart';
 
 class ShowToWaiterPage extends StatelessWidget {
   final FoodDetails food;
@@ -28,42 +29,42 @@ class ShowToWaiterPage extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: SingleChildScrollView( // İçeriğin küçük ekranlarda taşmasını önler
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
               if (food.imageUrl != null && food.imageUrl!.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16.0),
-                  child: Image.network(
-                    food.imageUrl!,
+                  // Image.network yerine CachedNetworkImage kullanıyoruz.
+                  child: CachedNetworkImage(
+                    imageUrl: food.imageUrl!,
                     height: MediaQuery.of(context).size.height * 0.35,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: MediaQuery.of(context).size.height * 0.35,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: MediaQuery.of(context).size.height * 0.35,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.no_photography_outlined, size: 80, color: Colors.grey),
-                      );
-                    },
+                    // Resim yüklenirken gösterilecek olan widget (placeholder)
+                    placeholder: (context, url) => Container(
+                      height: MediaQuery.of(context).size.height * 0.35,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    ),
+                    // Hata durumunda gösterilecek olan widget
+                    errorWidget: (context, url, error) => Container(
+                      height: MediaQuery.of(context).size.height * 0.35,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.no_photography_outlined, size: 80, color: Colors.grey),
+                    ),
                   ),
                 ),
+              // --- DEĞİŞİKLİK BURADA BİTİYOR ---
               const SizedBox(height: 32),
               Text(
                 food.turkishName,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Roboto', // Fontu daha okunaklı yapabilir
+                  fontFamily: 'Roboto',
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
