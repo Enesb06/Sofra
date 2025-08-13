@@ -16,6 +16,9 @@ import '../widgets/typing_indicator.dart';
 import '../widgets/typewriter_chat_message.dart';
 import 'show_to_waiter_page.dart';
 
+import '../models/city_model.dart';
+import '../models/city_food_model.dart';
+
 final supabase = Supabase.instance.client;
 
 // --- CHAT MESAJ MODELLERİ ---
@@ -115,6 +118,20 @@ class _RecognitionPageState extends State<RecognitionPage> {
         await DatabaseHelper.instance.batchUpsert(foodList);
       }
       if (kDebugMode) print("✅ Senkronizasyon tamamlandı. ${foodList.length} yemek yerel veritabanında.");
+      // 2. ŞEHİRLERİ SENKRONİZE ET
+      setState(() { _syncStatusMessage = "Mapping cities..."; });
+      final citiesResponse = await supabase.from('cities').select();
+      final cityList = (citiesResponse as List).map((e) => City.fromMap(e)).toList();
+      await DatabaseHelper.instance.batchUpsertCities(cityList);
+      if (kDebugMode) print("✅ Şehir senkronizasyonu tamamlandı: ${cityList.length} şehir.");
+
+       // 3. ŞEHİR-YEMEK İLİŞKİLERİNİ SENKRONİZE ET
+      setState(() { _syncStatusMessage = "Building flavor connections..."; });
+      final cityFoodsResponse = await supabase.from('city_foods').select();
+      final cityFoodList = (cityFoodsResponse as List).map((e) => CityFood.fromMap(e)).toList();
+      await DatabaseHelper.instance.batchUpsertCityFoods(cityFoodList);
+      if (kDebugMode) print("✅ Şehir-Yemek ilişkileri senkronizasyonu tamamlandı: ${cityFoodList.length} ilişki.");
+      
     } catch (e) {
       if (kDebugMode) print("❗️ Senkronizasyon sırasında HATA: $e");
     } finally {
