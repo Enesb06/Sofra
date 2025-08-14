@@ -1,3 +1,6 @@
+// GÜNCELLENMİŞ DOSYA: lib/services/database_helper.dart
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,7 +13,7 @@ import '../models/city_food_model.dart';
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // !!! ÖNEMLİ: Veritabanı yapısı değiştiği için versiyonu artırıyoruz.
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
 
   // 'foods' tablosu sabitleri
   static const tableFoods = 'foods';
@@ -29,11 +32,15 @@ class DatabaseHelper {
   static const columnContainsNuts = 'contains_nuts';
   static const columnCalorieInfoEn = 'calorie_info_en';
 
-  // YENİ TABLO VE SÜTUN SABİTLERİ
+  // YENİ/GÜNCELLENMİŞ TABLO VE SÜTUN SABİTLERİ
   static const tableCities = 'cities';
   static const columnCityId = 'id';
   static const columnCityName = 'city_name';
   static const columnNormalizedCityName = 'normalized_city_name';
+  static const columnCultureSummaryEn = 'culture_summary_en';
+  static const columnLocalDrinksEn = 'local_drinks_en';
+  static const columnPostMealSuggestionsEn = 'post_meal_suggestions_en';
+  static const columnIconicDishName = 'iconic_dish_name';
 
   static const tableCityFoods = 'city_foods';
   static const columnRelCityId = 'city_id';
@@ -79,25 +86,47 @@ class DatabaseHelper {
             $columnCalorieInfoEn TEXT
           )
           ''');
-    await _createCityTables(db);
+    // _createCityTables metodunu çağırarak hem cities hem city_foods tablolarını oluştur.
+    await _createCityTables(db, isUpgrade: false);
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (kDebugMode) {
+      print("Veritabanı yükseltiliyor: $oldVersion -> $newVersion");
+    }
     if (oldVersion < 2) {
-      await _createCityTables(db);
+       await _createCityTables(db, isUpgrade: true);
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnCultureSummaryEn TEXT');
+      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnLocalDrinksEn TEXT');
+      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnPostMealSuggestionsEn TEXT');
+      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnIconicDishName TEXT');
+       if (kDebugMode) {
+        print("✅ cities tablosuna yeni gurme sütunları eklendi.");
+      }
     }
   }
 
-  Future<void> _createCityTables(Database db) async {
-    await db.execute('''
+  Future<void> _createCityTables(Database db, {bool isUpgrade = false}) async {
+    // cities tablosu sadece db'de yoksa veya versiyon 1'den geçiliyorsa oluşturulur.
+    if (!isUpgrade) {
+        await db.execute('''
         CREATE TABLE $tableCities (
           $columnCityId INTEGER PRIMARY KEY,
           $columnCityName TEXT NOT NULL,
-          $columnNormalizedCityName TEXT NOT NULL
+          $columnNormalizedCityName TEXT NOT NULL,
+          $columnCultureSummaryEn TEXT,
+          $columnLocalDrinksEn TEXT,
+          $columnPostMealSuggestionsEn TEXT,
+          $columnIconicDishName TEXT
         )
       ''');
+    }
+    
+    // city_foods tablosu her zaman oluşturulabilir (eğer yoksa).
     await db.execute('''
-        CREATE TABLE $tableCityFoods (
+        CREATE TABLE IF NOT EXISTS $tableCityFoods (
           $columnRelCityId INTEGER NOT NULL,
           $columnRelFoodName TEXT NOT NULL,
           PRIMARY KEY ($columnRelCityId, $columnRelFoodName),
@@ -105,7 +134,9 @@ class DatabaseHelper {
           FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods ($columnName)
         )
       ''');
-    print("✅ cities ve city_foods tabloları başarıyla oluşturuldu/güncellendi.");
+    if (kDebugMode) {
+      print("✅ cities ve city_foods tabloları başarıyla oluşturuldu/güncellendi.");
+    }
   }
 
   // --- MEVCUT 'foods' İŞLEMLERİ ---
