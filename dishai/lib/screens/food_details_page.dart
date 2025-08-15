@@ -1,14 +1,17 @@
+// TEMİZLENMİŞ DOSYA: lib/screens/food_details_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import '../models/food_details.dart';
-import 'show_to_waiter_page.dart'; // Mevcut garson sayfamızı kullanacağız!
+import '../services/database_helper.dart';
+import 'show_to_waiter_page.dart';
 
 class FoodDetailsPage extends StatefulWidget {
   final FoodDetails food;
-
   const FoodDetailsPage({super.key, required this.food});
 
   @override
@@ -17,7 +20,38 @@ class FoodDetailsPage extends StatefulWidget {
 
 class _FoodDetailsPageState extends State<FoodDetailsPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isFavorite = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    final isFav = await DatabaseHelper.instance.isFavorite(widget.food.name);
+    if (mounted) {
+      setState(() { _isFavorite = isFav; });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavorite) {
+      await DatabaseHelper.instance.removeFavorite(widget.food.name);
+    } else {
+      await DatabaseHelper.instance.addFavorite(widget.food.name);
+    }
+    setState(() { _isFavorite = !_isFavorite; });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isFavorite
+            ? '${widget.food.turkishName} was added to your favorites!'
+            : '${widget.food.turkishName} was removed from your favorites.'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+  
   @override
   void dispose() {
     _audioPlayer.dispose();
@@ -40,17 +74,26 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Hikaye, İçindekiler, Yanında Ne Gider?
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.food.turkishName),
           backgroundColor: Colors.deepOrange.shade300,
+          actions: [
+            IconButton(
+              icon: Icon(
+                _isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: Colors.white,
+              ),
+              onPressed: _toggleFavorite,
+              tooltip: 'Add to Favorites',
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. GÖZ ALICI YEMEK FOTOĞRAFI
               if (widget.food.imageUrl != null && widget.food.imageUrl!.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: widget.food.imageUrl!,
@@ -59,26 +102,16 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
                   placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                   errorWidget: (context, url, error) => const Icon(Icons.no_photography_outlined, size: 80, color: Colors.grey),
                 ),
-              
-              // 2. YEMEK İSİMLERİ
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.food.turkishName,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      widget.food.englishName,
-                      style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-                    ),
+                    Text(widget.food.turkishName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                    Text(widget.food.englishName, style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
                   ],
                 ),
               ),
-
-              // 3. AKSİYON BUTONLARI
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
@@ -88,11 +121,7 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
                         icon: const Icon(Icons.volume_up_outlined),
                         label: const Text('Pronounce'),
                         onPressed: _playPronunciation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade400,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade400, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -103,18 +132,12 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
                         onPressed: () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => ShowToWaiterPage(food: widget.food)));
                         },
-                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade400,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
+                         style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade400, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                       ),
                     ),
                   ],
                 ),
               ),
-              
-              // 4. BİLGİ SEKMELERİ
               const TabBar(
                 labelColor: Colors.deepOrange,
                 unselectedLabelColor: Colors.grey,
@@ -126,7 +149,7 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
                 ],
               ),
               SizedBox(
-                height: 250, // Sekme içeriği için bir yükseklik verelim
+                height: 250, 
                 child: TabBarView(
                   children: [
                     _buildInfoTab(widget.food.storyEn ?? 'No story available yet.'),
@@ -149,7 +172,6 @@ class _FoodDetailsPageState extends State<FoodDetailsPage> {
     );
   }
 
-  // RecognitionPage'deki yardımcı fonksiyonları buraya taşıyoruz
   String _buildIngredientsText(FoodDetails food) {
     final ingredients = "📋 Ingredients:\n${food.ingredientsEn ?? 'Not available.'}";
     final spiceLevel = "\n\n🔥 Spice Level: ${_generateSpiceLevelText(food.spiceLevel)}";

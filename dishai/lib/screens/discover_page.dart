@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'dart:async'; // Timer için gerekli
-import 'dart:ui'; // BackdropFilter için gerekli
+import 'dart:async';
+import 'dart:ui';
 
 // Projenizin yapısına uygun doğru import yolları
 import '../services/database_helper.dart';
 import '../models/city_model.dart';
 import '../models/food_details.dart';
 import 'food_details_page.dart';
-
-// Kendi widget'larınızın doğru yolunu belirttiğinizden emin olun
+import 'passport_page.dart';
 import '../widgets/typewriter_chat_message.dart'; 
 import '../widgets/typing_indicator.dart';
 
-// --- CHAT MESAJI MODELLERİ (YAPISI AYNI KALIYOR) ---
+// --- CHAT MESAJI MODELLERİ ---
 abstract class ChatMessage {
   final bool isFromUser;
   ChatMessage(this.isFromUser);
@@ -70,6 +69,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
   List<City> _citiesOnMap = [];
   bool _isTransitioning = false;
 
+  // <--- YENİ STATE DEĞİŞKENLERİ: Haritanın yüklenme durumunu kontrol etmek için ---
+  bool _isMapLoading = true;
+  String _mapStatusMessage = "Harita yükleniyor...";
+
+  // İnce ayar modu değişkenleri
   bool _isFineTuningMode = false;
   String? _selectedCityForTuning;
   double _tuningX = 0.5;
@@ -81,9 +85,37 @@ class _DiscoverPageState extends State<DiscoverPage> {
     _loadCitiesForMap();
   }
 
+  // <--- GÜNCELLENMİŞ METOT: Şehirler veritabanında bulunana kadar akıllıca bekler ---
   Future<void> _loadCitiesForMap() async {
-    final cities = await DatabaseHelper.instance.getAllCities();
-    if (mounted) setState(() => _citiesOnMap = cities);
+    if (mounted) setState(() { _isMapLoading = true; });
+
+    // Veritabanından şehirleri almayı dene.
+    List<City> cities = await DatabaseHelper.instance.getAllCities();
+    int retries = 5; // En fazla 5 kez denesin (toplam 2.5 saniye)
+
+    // Şehirler boşsa ve deneme hakkımız varsa, kısa bir süre bekleyip tekrar dene.
+    // Bu, diğer sekmedeki veri senkronizasyonuna zaman tanır.
+    while (cities.isEmpty && retries > 0 && mounted) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      cities = await DatabaseHelper.instance.getAllCities();
+      retries--;
+    }
+
+    if (!mounted) return;
+
+    // Sonuçları state'e işle.
+    if (cities.isEmpty) {
+      setState(() {
+        _citiesOnMap = [];
+        _isMapLoading = false;
+        _mapStatusMessage = "Şehirler yüklenemedi.\nLütfen internet bağlantınızı kontrol edip uygulamayı yeniden başlatın.";
+      });
+    } else {
+      setState(() {
+        _citiesOnMap = cities;
+        _isMapLoading = false;
+      });
+    }
   }
 
   @override
@@ -157,7 +189,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     }
   }
 
-  // GÜNCELLENDİ: onPressed artık ikinci bir parametre (düğmenin metni) yolluyor.
   void _showCityContextOptions() {
     setState(() {
       _chatMessages.add(ButtonOptionsMessage(
@@ -173,11 +204,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
     _scrollToBottom();
   }
 
-  // GÜNCELLENDİ: Bu fonksiyon artık kullanıcının seçimini bir sohbet balonu olarak ekliyor.
   void _handleContextQuery(String queryType, String userText) {
     setState(() {
       _chatMessages.removeWhere((msg) => msg is ButtonOptionsMessage);
-      _chatMessages.add(UserTextMessage(userText)); // Kullanıcının seçimi eklendi
+      _chatMessages.add(UserTextMessage(userText));
       _chatMessages.add(TypingIndicatorMessage());
     });
     _scrollToBottom();
@@ -274,6 +304,18 @@ class _DiscoverPageState extends State<DiscoverPage> {
         title: Text(_selectedCity?.cityName ?? 'DishAI - Flavor Explorer'),
         backgroundColor: Colors.blue.shade300,
         leading: _selectedCity != null ? IconButton(icon: const Icon(Icons.map_outlined), onPressed: _resetToMapView, tooltip: 'Back to Map') : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PassportPage()),
+              );
+            },
+            tooltip: 'Lezzet Pasaportu',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -290,7 +332,37 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
+  // <--- GÜNCELLENMİŞ WIDGET: Yüklenme durumunu ve hata mesajını gösterir ---
   Widget _buildMapView() {
+    // Harita hala yükleniyorsa, animasyon göster.
+    if (_isMapLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(_mapStatusMessage),
+          ],
+        ),
+      );
+    }
+    
+    // Yükleme bitti ama şehir bulunamadıysa, hata mesajı göster.
+    if (_citiesOnMap.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              _mapStatusMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+            ),
+          ),
+        );
+    }
+
+    // Her şey yolundaysa, haritayı çiz.
     const double imageAspectRatio = 1920 / 924;
     final Map<String, Offset> cityCoordinates = {
       'Ankara': const Offset(0.34, 0.45), 'İzmir': const Offset(0.05, 0.63), 'Gaziantep': const Offset(0.60, 0.86), 'Trabzon': const Offset(0.72, 0.27),
@@ -328,12 +400,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return Center(child: Container(padding: const EdgeInsets.all(24), margin: const EdgeInsets.symmetric(vertical: 30, horizontal: 20), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [ Colors.blue.shade50, Colors.blue.shade100.withOpacity(0.8) ]), borderRadius: BorderRadius.circular(20), boxShadow: [ BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 20, spreadRadius: 5) ]), child: Column(mainAxisSize: MainAxisSize.min, children: [ TweenAnimationBuilder(duration: const Duration(milliseconds: 1200), tween: Tween<double>(begin: 0, end: 1), builder: (context, double value, child) { return Transform.scale(scale: 0.8 + (value * 0.2), child: Transform.rotate(angle: value * 0.1, child: Hero(tag: 'city-pin-${city.id}', child: Material(type: MaterialType.transparency, child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [ Colors.blue.shade400, Colors.blue.shade600 ]), boxShadow: [ BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 15, spreadRadius: 2) ]), child: const Icon(Icons.explore, size: 40, color: Colors.white)))))); }), const SizedBox(height: 20), TweenAnimationBuilder(duration: const Duration(milliseconds: 800), tween: Tween<double>(begin: 0, end: 1), builder: (context, double value, child) { return Opacity(opacity: value, child: Transform.translate(offset: Offset(0, 20 * (1 - value)), child: Text("Exploring ${city.cityName}", style: TextStyle(fontSize: 24, color: Colors.blue.shade800, fontWeight: FontWeight.bold, letterSpacing: 1.2), textAlign: TextAlign.center))); }), const SizedBox(height: 12), TweenAnimationBuilder(duration: const Duration(milliseconds: 1000), tween: Tween<double>(begin: 0, end: 1), builder: (context, double value, child) { return Opacity(opacity: value, child: Transform.translate(offset: Offset(0, 15 * (1 - value)), child: Text("Discovering authentic flavors and culinary treasures", style: TextStyle(fontSize: 16, color: Colors.grey.shade600, fontWeight: FontWeight.w500), textAlign: TextAlign.center))); }), const SizedBox(height: 24), SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600), backgroundColor: Colors.blue.shade100)), const SizedBox(height: 16), TweenAnimationBuilder(duration: const Duration(milliseconds: 1500), tween: Tween<double>(begin: 0, end: 1), builder: (context, double value, child) { return Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) { final delay = index * 0.3; final animValue = ((value - delay).clamp(0.0, 1.0)); return Container(margin: const EdgeInsets.symmetric(horizontal: 4), child: AnimatedContainer(duration: Duration(milliseconds: 300 + (index * 100)), width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade400.withOpacity(animValue)))); })); })])));
   }
 
-  // GÜNCELLENDİ: ListView.builder artık UserTextMessage'ı çizecek koşulu içeriyor.
   Widget _buildChatView() {
     return Column(children: [ Expanded(child: ListView.builder(controller: _scrollController, padding: const EdgeInsets.all(16.0), itemCount: _chatMessages.length, itemBuilder: (context, index) { 
         final message = _chatMessages[index]; 
         
-        // YENİ KOŞUL: Kullanıcı mesajını çiz
         if (message is UserTextMessage) {
           return _buildUserMessage(message);
         }
@@ -347,7 +417,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     if (_isLoading) const Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: LinearProgressIndicator())]);
   }
   
-  // YENİ WIDGET: Kullanıcı mesajını çizen widget
   Widget _buildUserMessage(UserTextMessage message) {
     return Align(
       alignment: Alignment.centerRight,

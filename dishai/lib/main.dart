@@ -1,7 +1,8 @@
-// lib/main.dart
+// GÜNCELLENMİŞ DOSYA: lib/main.dart
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'screens/splash_screen.dart';
 
 const String supabaseUrl = 'https://dqqtwebzwjlgyewmezma.supabase.co';
@@ -11,6 +12,11 @@ const String supabaseAnonKey =
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+
+  // <--- DEĞİŞİKLİK: 'tr_TR' yerine 'en_US' kullanıyoruz ---
+  // Bu, uygulamanın tarih formatları için İngilizce verilerini yüklemesini sağlar.
+  await initializeDateFormatting('en_US', null);
+
   runApp(const DishAI());
 }
 
