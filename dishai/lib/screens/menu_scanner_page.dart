@@ -100,68 +100,77 @@ class _MenuScannerPageState extends State<MenuScannerPage> {
         .replaceAll('ö', 'o');
   }
 
-  // "En Uzun Eşleşme Öncelikli" Algoritma
-  Future<void> _matchTextWithDatabase(RecognizedText recognizedText, String imagePath) async {
-    // 1. Veritabanından verileri al
-    final foodNameMap = await DatabaseHelper.instance.getAllFoodNamesForMatching();
+ // LİDER ALGORİTMASI v2 - KESİN ÇÖZÜM
+// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
 
-    // 2. Veritabanı verilerini normalleştir ve arama için hazırla
+ // ÇOKLU EŞLEŞME ALGORİTMASI
+// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
+
+// FİNAL ALGORİTMASI - ÇİFT YÖNLÜ KELİME KAPSAMA
+// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
+
+ // "ANAHTAR KELİME" ALGORİTMASI - SON TAVSİYE EDİLEN VERSİYON
+// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
+
+  Future<void> _matchTextWithDatabase(RecognizedText recognizedText, String imagePath) async {
+    // 1. Veritabanı verilerini al ve normalleştir.
+    final foodNameMap = await DatabaseHelper.instance.getAllFoodNamesForMatching();
     Map<String, String> normalizedDbFoods = {};
     foodNameMap.forEach((turkishName, nameId) {
       normalizedDbFoods[_normalizeText(turkishName)] = nameId;
     });
 
-    // Normalleştirilmiş isimleri uzunluklarına göre BÜYÜKTEN KÜÇÜĞE sırala
+    // En uzun (en spesifik) isimlerin önce kontrol edilmesi için sırala.
+    // Bu, "adana kebap"ın "adana"dan (eğer olsaydı) önce kontrol edilmesini sağlar.
     final allDbFoodNames = normalizedDbFoods.keys.toList()
       ..sort((a, b) => b.length.compareTo(a.length));
 
-    final List<MatchedFood> matchedFoods = [];
-    final Set<String> foundFoodIds = {};
+    // 2. OCR'dan gelen tüm satırları al.
     final List<TextLine> allLines = [];
     for (var block in recognizedText.blocks) {
       allLines.addAll(block.lines);
     }
     
-    // DEBUG: Tanınan tüm satırları yazdır
-    print("--- Normalleştirilmiş OCR Satırları ---");
-    for(var line in allLines) {
-      print(_normalizeText(line.text));
-    }
-    print("-------------------------------------");
-    
-    // DEBUG: Veritabanındaki normalleştirilmiş isimleri yazdır
-    print("--- Veritabanındaki Normalleştirilmiş İsimler (İlk 5) ---");
-    print(allDbFoodNames.take(5));
-    print("-------------------------------------------------------");
+    final List<MatchedFood> matchedFoods = [];
+    final Set<String> foundFoodIds = {}; // Sonuçların tekrar etmesini engellemek için.
 
-    // 3. TANINAN TÜM satırları döngüye al
-    for (TextLine line in allLines) {
-      String ocrLineText = _normalizeText(line.text);
+    // 3. Veritabanındaki HER BİR yemek için döngü başlat.
+    for (String dbFoodName in allDbFoodNames) {
+      // 4. Yemeğin ilk kelimesini "anahtar kelime" olarak belirle.
+      String keyWord = dbFoodName.split(' ').first;
+      
+      // "su", "tuz" gibi çok kısa ve genel anahtar kelimeleri atla.
+      // Bu, yanlış pozitif eşleşmeleri (örn: "sulu köfte"nin "su" ile eşleşmesi) engeller.
+      if (keyWord.length < 3) continue;
 
-      // 4. VERİTABANINDAKİ TÜM yemek isimlerini (uzunluğa göre sıralı) döngüye al
-      for (String dbFoodName in allDbFoodNames) {
-        // EŞLEŞME KURALI: Normalleştirilmiş OCR satırı, normalleştirilmiş veritabanı yemek adını içeriyor mu?
-        if (ocrLineText.contains(dbFoodName)) {
+      // 5. OCR'daki HER BİR satır için döngü başlat.
+      for (TextLine line in allLines) {
+        String ocrLineText = _normalizeText(line.text);
+        
+        // 6. EŞLEŞME KURALI: Menüdeki satır, bizim anahtar kelimemizi içeriyor mu?
+        if (ocrLineText.contains(keyWord)) {
           final foodId = normalizedDbFoods[dbFoodName]!;
 
+          // Eğer bu yemeği daha önce HİÇBİR satırdan bulmadıysak...
           if (!foundFoodIds.contains(foodId)) {
             final foodDetails = await DatabaseHelper.instance.getFoodByName(foodId);
             if (foodDetails != null) {
+              print("EŞLEŞME BULUNDU! Anahtar Kelime: '$keyWord' -> Menü: '$ocrLineText' -> DB: '$dbFoodName'");
               matchedFoods.add(MatchedFood(
                 food: foodDetails,
                 boundingBox: line.boundingBox,
               ));
               foundFoodIds.add(foodId);
               
-              // Bu satır için EN İYİ (en uzun) eşleşmeyi bulduk.
-              // Bu satırı daha fazla kontrol etmeyi bırakıp sonraki satıra geç.
+              // Bu yemeği bulduk, artık bu yemeği başka satırlarda aramaya gerek yok.
+              // Bir sonraki VERİTABANI yemeğine geç.
               break; 
             }
           }
         }
       }
     }
-
+    
     print("Eşleşme tamamlandı. Bulunan yemek sayısı: ${matchedFoods.length}");
 
     if (!mounted) return;
