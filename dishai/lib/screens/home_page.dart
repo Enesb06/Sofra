@@ -1,6 +1,9 @@
+// GÜNCELLENMİŞ DOSYA: lib/screens/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'recognition_page.dart';
 import 'discover_page.dart';
+import 'menu_scanner_page.dart'; // <-- YENİ İMPORT
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,10 +16,10 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
   // Navigasyon çubuğunun yöneteceği sayfaların listesi.
-  // RecognitionPage'i buraya olduğu gibi yerleştiriyoruz.
   static const List<Widget> _widgetOptions = <Widget>[
-    RecognitionPage(), // MEVCUT SAYFANIZ
-    DiscoverPage(),    // YENİ SAYFAMIZ
+    RecognitionPage(),
+    DiscoverPage(),
+    MenuScannerPage(), // <-- YENİ SAYFAYI EKLE
   ];
 
   void _onItemTapped(int index) {
@@ -28,7 +31,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Seçili indekse göre ilgili sayfayı body'de gösteriyoruz.
       body: IndexedStack(
         index: _selectedIndex,
         children: _widgetOptions,
@@ -45,12 +47,17 @@ class _HomePageState extends State<HomePage> {
             activeIcon: Icon(Icons.explore),
             label: 'Discover',
           ),
+          BottomNavigationBarItem( // <-- YENİ SEKMEYİ EKLE
+            icon: Icon(Icons.menu_book_outlined),
+            activeIcon: Icon(Icons.menu_book),
+            label: 'Scan Menu',
+          ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepOrange, // Seçili sekmenin rengi
-        unselectedItemColor: Colors.grey.shade600, // Seçili olmayan sekmelerin rengi
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey.shade600,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // İkiden fazla sekme olursa diye
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }

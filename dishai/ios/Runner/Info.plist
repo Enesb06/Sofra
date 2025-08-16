@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dishai</string>
+	<string>DishAI</string> <!-- GÜNCELLENDİ: Uygulama adını daha okunaklı yapalım -->
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+    <!-- EKLENDİ: Kamera Kullanım İzni Açıklaması -->
+    <!-- Kullanıcıya neden kameraya erişmek istediğimizi açıklayan metin. -->
+    <key>NSCameraUsageDescription</key>
+    <string>DishAI needs camera access to scan restaurant menus and help you discover delicious Turkish dishes.</string>
+    
+    <!-- EKLENDİ: Fotoğraf Galerisi Kullanım İzni Açıklaması -->
+    <!-- Kullanıcının galerisinden bir menü fotoğrafı seçmesi ihtimaline karşı. -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>DishAI needs photo library access so you can select a menu photo to scan and discover dishes.</string>
+
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -31,9 +42,7 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
+	</array> <!-- GÜNCELLENDİ: Şimdilik sadece dikey modu destekleyelim, daha stabil olur. -->
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

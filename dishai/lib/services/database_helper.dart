@@ -265,4 +265,21 @@ class DatabaseHelper {
     final List<Map<String, dynamic>> maps = await db.query(tableUserTastedFoods, orderBy: '$columnTastedDate DESC');
     return List.generate(maps.length, (i) => TastedFood.fromMap(maps[i]));
   }
+   Future<Map<String, String>> getAllFoodNamesForMatching() async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableFoods,
+      columns: [columnTurkishName, columnName],
+    );
+
+    final Map<String, String> foodNameMap = {};
+    for (var map in maps) {
+      // Türkçe ismi küçük harfe çevirerek anahtar yapıyoruz.
+      // Değer olarak da yemeğin asıl 'name' ID'sini saklıyoruz.
+      final turkishName = (map[columnTurkishName] as String).toLowerCase();
+      final nameId = map[columnName] as String;
+      foodNameMap[turkishName] = nameId;
+    }
+    return foodNameMap;
+  }
 }
