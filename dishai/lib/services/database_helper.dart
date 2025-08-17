@@ -282,4 +282,29 @@ class DatabaseHelper {
     }
     return foodNameMap;
   }
+  // Bu metodu lib/services/database_helper.dart dosyasının içine ekle.
+
+  // Veritabanındaki TÜM yemeklerin detaylarını getirir.
+  Future<List<FoodDetails>> getAllFoods() async {
+    final db = await instance.database;
+    // 'foods' tablosundaki tüm satırları, Türkçe isme göre alfabetik sıralayarak çekiyoruz.
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableFoods,
+      orderBy: '$columnTurkishName ASC'
+    );
+
+    // Çektiğimiz her bir map'i (satırı) FoodDetails nesnesine dönüştürüyoruz.
+    // getFoodByName bu işi zaten yapıyor ama tüm listeyi tek seferde dönmek daha performanslı olabilir.
+    // Şimdilik mevcut yapıyı kullanarak ilerleyelim.
+    List<FoodDetails> foods = [];
+    for (var map in maps) {
+      // Map'teki name (ID) üzerinden tam detayları alalım.
+      final foodDetail = await getFoodByName(map[columnName] as String);
+      if (foodDetail != null) {
+        foods.add(foodDetail);
+      }
+    }
+    
+    return foods;
+  }
 }
