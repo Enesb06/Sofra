@@ -210,22 +210,40 @@ class _DiscoverPageState extends State<DiscoverPage> {
 }
 
   // YENİ METOT: Mekan keşfi butonuna tıklandığında VenueExplorerPage'i açar.
+// _handleVenueExplorerSelection metodunu bununla değiştir.
+
+// _handleVenueExplorerSelection metodunu bununla değiştir.
+
 void _handleVenueExplorerSelection(City city, {required bool showAllFoods}) {
-  setState(() {
-     _chatMessages.removeWhere((msg) => msg is ButtonOptionsMessage);
-  });
-  
   Navigator.push(
     context,
     MaterialPageRoute(
       builder: (context) => VenueExplorerPage(
         city: city,
-        showAllTurkishFoods: showAllFoods, // YENİ PARAMETRE
+        showAllTurkishFoods: showAllFoods,
       ),
     ),
-  );
-}
+  ).then((_) {
+    // BU BLOK, KULLANICI VenueExplorerPage'DEN GERİ GELDİĞİNDE ÇALIŞIR.
+    if (!mounted) return;
 
+    // ÖNEMLİ: setState KULLANMIYORUZ. Sadece sohbeti yeniden tetikliyoruz.
+    // Bu, mevcut sohbet listesini SİLMEDEN, sonuna yeni mesajlar ekler.
+
+    // Kullanıcı geri geldiğinde, "Let's find a place to eat!" butonlarının
+    // hala ekranda olduğundan emin olmak için onları TEKRAR ekleyelim.
+    // Önce eskileri (varsa) silelim ki tekrar tekrar eklenmesin.
+    setState(() {
+        _chatMessages.removeWhere((msg) => msg is ButtonOptionsMessage && msg.title == "Let's find a place to eat!");
+        _chatMessages.removeWhere((msg) => msg is ButtonOptionsMessage && msg.title == "What else can I help you with?");
+    });
+
+
+    // Şimdi mekan bulma ve diğer seçenekleri sanki ilk defa sunuyormuş gibi
+    // tekrar sunalım. Bu, sohbeti kaldığı yerden canlandırır.
+    _offerVenueExplorer(city);
+  });
+}
   void _showCityContextOptions() {
     // Bu metot aynı kalıyor
     setState(() {
