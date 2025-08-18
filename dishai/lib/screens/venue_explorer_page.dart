@@ -1,4 +1,4 @@
-// GÜNCELLENMİŞ DOSYA: lib/screens/venue_explorer_page.dart
+// Lütfen bu dosyanın içeriğini projenizdeki lib/screens/venue_explorer_page.dart dosyasıyla tamamen değiştirin.
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,7 +16,7 @@ const String GOOGLE_API_KEY = "AIzaSyAELUVYZwhbFA5XCmmo_K59v44R36_do8U";
 
 class VenueExplorerPage extends StatefulWidget {
   final City city;
-  final bool showAllTurkishFoods; // <-- YENİ PARAMETRE
+  final bool showAllTurkishFoods;
 
   const VenueExplorerPage({
     super.key,
@@ -40,11 +40,10 @@ class _VenueExplorerPageState extends State<VenueExplorerPage> {
  @override
 void initState() {
   super.initState();
-  // Parametreye göre hangi yemek listesini çekeceğimizi belirliyoruz
   if (widget.showAllTurkishFoods) {
-    _foodsFuture = _getAllFoods(); // Veritabanındaki TÜM yemekleri çek
+    _foodsFuture = _getAllFoods();
   } else {
-    _foodsFuture = _getFoodsForCity(); // Sadece o şehre özel yemekleri çek
+    _foodsFuture = _getFoodsForCity();
   }
 }
 
@@ -61,26 +60,31 @@ void initState() {
     return foods;
     
   }
-   // Bu metot, DatabaseHelper'a eklediğimiz yeni fonksiyonu çağırır.
   Future<List<FoodDetails>> _getAllFoods() async {
-    // DatabaseHelper'dan tüm yemekleri çek ve sırala.
     final foods = await DatabaseHelper.instance.getAllFoods();
-    // DatabaseHelper zaten sıralı veriyor ama garanti olsun diye tekrar sıralayabiliriz.
-    // foods.sort((a, b) => a.turkishName.compareTo(b.turkishName));
     return foods;
   }
 
+  // <-- ADIM 3'ÜN UYGULANDIĞI YER BURASI -->
   Future<void> _onFoodSelected(FoodDetails food) async {
     setState(() {
       _selectedFood = food;
       _isLoadingVenues = true;
       _errorMessage = null;
-      _venues = null; // Önceki sonuçları temizle
+      _venues = null;
     });
 
     try {
       final position = await _placesService.getCurrentLocation();
-      final results = await _placesService.findRestaurants(food.turkishName, position);
+      
+      // DEĞİŞİKLİK: findRestaurants metodunu artık 3 parametre ile çağırıyoruz.
+      // Yemeğin adını, kategorisini ve mevcut konumu gönderiyoruz.
+      final results = await _placesService.findRestaurants(
+        food.turkishName,    // 1. Parametre: Yemeğin adı
+        food.foodCategory,   // 2. Parametre: Yemeğin kategorisi
+        position             // 3. Parametre: Konum
+      );
+
       setState(() {
         _venues = results;
       });
@@ -122,9 +126,6 @@ void initState() {
   }
 
   Widget _buildFoodSelectionHeader() {
-    // Bu widget öncekiyle aynı, herhangi bir değişiklik yapmana gerek yok.
-    
-    // Eğer kodun yoksa, aşağıdaki tam kodu kullanabilirsin.
     return Material(
       elevation: 2,
       color: Colors.white,
@@ -219,7 +220,6 @@ void initState() {
     }
     
     if (_venues == null) {
-        // Bu durum, aramanın henüz başlamadığı anlamına gelir.
         return const SizedBox.shrink(); 
     }
 
@@ -241,7 +241,6 @@ void initState() {
   }
 }
 
-// YENİ KART WIDGET'I (Google verileri için)
 class GoogleVenueCard extends StatelessWidget {
   final PlaceSearchResult venue;
   final PlacesService placesService;
@@ -261,7 +260,6 @@ class GoogleVenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Google Haritalar'da mekanı aratmak için bir URL oluştur.
     final googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(venue.name)}&query_place_id=${venue.placeId}';
 
     return Card(

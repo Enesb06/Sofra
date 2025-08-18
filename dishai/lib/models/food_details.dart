@@ -15,6 +15,7 @@ class FoodDetails {
   final bool containsDairy;
   final bool containsNuts;
   final String? calorieInfoEn;
+   final String? foodCategory;
 
   FoodDetails({
     required this.name,
@@ -31,6 +32,7 @@ class FoodDetails {
     required this.containsDairy,
     required this.containsNuts,
     this.calorieInfoEn,
+     this.foodCategory, // <-- 2. CONSTRUCTOR'A BURAYA EKLE
   });
 
   factory FoodDetails.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class FoodDetails {
       containsDairy: json['contains_dairy'] ?? false,
       containsNuts: json['contains_nuts'] ?? false,
       calorieInfoEn: json['calorie_info_en'],
+      foodCategory: json['food_category'], // <-- 3. JSON PARSER'A BURAYA EKLE
     );
   }
 }

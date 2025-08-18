@@ -14,7 +14,7 @@ import '../models/food_tip_model.dart';
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // <-- GÜNCELLEME: Veritabanı şeması değiştiği için versiyonu artırıyoruz.
-  static const _databaseVersion = 6;
+  static const _databaseVersion = 7;
 
   static const tableFoods = 'foods';
   static const columnName = 'name';
@@ -31,6 +31,7 @@ class DatabaseHelper {
   static const columnContainsDairy = 'contains_dairy';
   static const columnContainsNuts = 'contains_nuts';
   static const columnCalorieInfoEn = 'calorie_info_en';
+  static const columnFoodCategory = 'food_category';
 
   static const tableCities = 'cities';
   static const columnCityId = 'id';
@@ -86,6 +87,7 @@ class DatabaseHelper {
         $columnPairingEn TEXT, $columnSpiceLevel INTEGER, $columnIsVegetarian INTEGER NOT NULL,
         $columnContainsGluten INTEGER NOT NULL, $columnContainsDairy INTEGER NOT NULL, $columnContainsNuts INTEGER NOT NULL,
         $columnCalorieInfoEn TEXT
+           $columnFoodCategory TEXT -- <-- 4. DEĞİŞİKLİK: CREATE TABLE sorgusuna ekle.
       )
     ''');
     await _createCityTables(db, isUpgrade: false);
@@ -129,7 +131,12 @@ class DatabaseHelper {
         print("✅ city_foods tablosuna insider_tip_en sütunu eklendi.");
       }
     }
+       if (oldVersion < 7) {
+      await db.execute('ALTER TABLE $tableFoods ADD COLUMN $columnFoodCategory TEXT');
+      if (kDebugMode) { print("✅ foods tablosuna food_category sütunu eklendi."); }
+    }
   }
+  
 
   Future<void> _createPassportTables(Database db) async {
     await db.execute('''
@@ -189,6 +196,7 @@ class DatabaseHelper {
         columnContainsDairy: food.containsDairy ? 1 : 0,
         columnContainsNuts: food.containsNuts ? 1 : 0,
         columnCalorieInfoEn: food.calorieInfoEn,
+        columnFoodCategory: food.foodCategory,
       };
       batch.insert(tableFoods, map,
           conflictAlgorithm: ConflictAlgorithm.replace);
@@ -217,6 +225,7 @@ class DatabaseHelper {
         containsDairy: (map[columnContainsDairy] as int) == 1,
         containsNuts: (map[columnContainsNuts] as int) == 1,
         calorieInfoEn: map[columnCalorieInfoEn] as String?,
+         foodCategory: map[columnFoodCategory] as String?,
       );
     }
     return null;
