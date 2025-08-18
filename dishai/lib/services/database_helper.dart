@@ -1,4 +1,4 @@
-// GÜNCELLENMİŞ DOSYA: lib/services/database_helper.dart
+// Lütfen bu dosyanın içeriğini projenizdeki lib/services/database_helper.dart dosyasıyla tamamen değiştirin.
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
@@ -9,10 +9,12 @@ import '../models/food_details.dart';
 import '../models/city_model.dart';
 import '../models/city_food_model.dart';
 import '../models/tasted_food_model.dart';
+import '../models/food_tip_model.dart';
 
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
-  static const _databaseVersion = 5;
+  // <-- GÜNCELLEME: Veritabanı şeması değiştiği için versiyonu artırıyoruz.
+  static const _databaseVersion = 6;
 
   static const tableFoods = 'foods';
   static const columnName = 'name';
@@ -42,6 +44,8 @@ class DatabaseHelper {
   static const tableCityFoods = 'city_foods';
   static const columnRelCityId = 'city_id';
   static const columnRelFoodName = 'food_name';
+  // <-- YENİ: İpucu sütunu için sabit (constant) tanımı.
+  static const columnInsiderTipEn = 'insider_tip_en';
 
   static const tableUserTastedFoods = 'user_tasted_foods';
   static const columnTastedId = 'id';
@@ -76,26 +80,34 @@ class DatabaseHelper {
 
   Future _onCreate(Database db, int version) async {
     await db.execute('''
-          CREATE TABLE $tableFoods (
-            $columnName TEXT PRIMARY KEY, $columnEnglishName TEXT NOT NULL, $columnTurkishName TEXT NOT NULL,
-            $columnImageUrl TEXT, $columnStoryEn TEXT, $columnIngredientsEn TEXT, $columnPronunciationText TEXT,
-            $columnPairingEn TEXT, $columnSpiceLevel INTEGER, $columnIsVegetarian INTEGER NOT NULL,
-            $columnContainsGluten INTEGER NOT NULL, $columnContainsDairy INTEGER NOT NULL, $columnContainsNuts INTEGER NOT NULL,
-            $columnCalorieInfoEn TEXT
-          )
-          ''');
+      CREATE TABLE $tableFoods (
+        $columnName TEXT PRIMARY KEY, $columnEnglishName TEXT NOT NULL, $columnTurkishName TEXT NOT NULL,
+        $columnImageUrl TEXT, $columnStoryEn TEXT, $columnIngredientsEn TEXT, $columnPronunciationText TEXT,
+        $columnPairingEn TEXT, $columnSpiceLevel INTEGER, $columnIsVegetarian INTEGER NOT NULL,
+        $columnContainsGluten INTEGER NOT NULL, $columnContainsDairy INTEGER NOT NULL, $columnContainsNuts INTEGER NOT NULL,
+        $columnCalorieInfoEn TEXT
+      )
+    ''');
     await _createCityTables(db, isUpgrade: false);
     await _createPassportTables(db);
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (kDebugMode) { print("Veritabanı yükseltiliyor: $oldVersion -> $newVersion"); }
-    if (oldVersion < 2) { await _createCityTables(db, isUpgrade: true); }
+    if (kDebugMode) {
+      print("Veritabanı yükseltiliyor: $oldVersion -> $newVersion");
+    }
+    if (oldVersion < 2) {
+      await _createCityTables(db, isUpgrade: true);
+    }
     if (oldVersion < 3) {
-      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnCultureSummaryEn TEXT');
-      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnLocalDrinksEn TEXT');
-      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnPostMealSuggestionsEn TEXT');
-      await db.execute('ALTER TABLE $tableCities ADD COLUMN $columnIconicDishName TEXT');
+      await db.execute(
+          'ALTER TABLE $tableCities ADD COLUMN $columnCultureSummaryEn TEXT');
+      await db.execute(
+          'ALTER TABLE $tableCities ADD COLUMN $columnLocalDrinksEn TEXT');
+      await db.execute(
+          'ALTER TABLE $tableCities ADD COLUMN $columnPostMealSuggestionsEn TEXT');
+      await db.execute(
+          'ALTER TABLE $tableCities ADD COLUMN $columnIconicDishName TEXT');
     }
     if (oldVersion < 4) {
       await _createPassportTables(db);
@@ -103,7 +115,19 @@ class DatabaseHelper {
     if (oldVersion < 5) {
       await db.execute('DROP TABLE IF EXISTS $tableUserTastedFoods');
       await _createPassportTables(db);
-      if (kDebugMode) { print("✅ user_tasted_foods tablosu imagePath sütunu ile yeniden oluşturuldu."); }
+      if (kDebugMode) {
+        print(
+            "✅ user_tasted_foods tablosu imagePath sütunu ile yeniden oluşturuldu.");
+      }
+    }
+    // <-- YENİ: Veritabanı versiyonu 5'ten 6'ya geçerken bu blok çalışacak.
+    if (oldVersion < 6) {
+      // Mevcut city_foods tablosuna yeni sütunu ekler.
+      await db.execute(
+          'ALTER TABLE $tableCityFoods ADD COLUMN $columnInsiderTipEn TEXT');
+      if (kDebugMode) {
+        print("✅ city_foods tablosuna insider_tip_en sütunu eklendi.");
+      }
     }
   }
 
@@ -111,7 +135,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableUserFavorites (
         $columnFavFoodName TEXT PRIMARY KEY,
-        FOREIGN KEY ($columnFavFoodName) REFERENCES $tableFoods ($columnName) ON DELETE CASCADE
+        FOREIGN KEY ($columnFavFoodName) REFERENCES $tableFoods($columnName) ON DELETE CASCADE
       )
     ''');
     await db.execute('''
@@ -126,8 +150,8 @@ class DatabaseHelper {
   }
 
   Future<void> _createCityTables(Database db, {bool isUpgrade = false}) async {
-     if (!isUpgrade) {
-        await db.execute('''
+    if (!isUpgrade) {
+      await db.execute('''
         CREATE TABLE $tableCities (
           $columnCityId INTEGER PRIMARY KEY, $columnCityName TEXT NOT NULL, $columnNormalizedCityName TEXT NOT NULL,
           $columnCultureSummaryEn TEXT, $columnLocalDrinksEn TEXT, $columnPostMealSuggestionsEn TEXT, $columnIconicDishName TEXT
@@ -135,13 +159,15 @@ class DatabaseHelper {
       ''');
     }
     await db.execute('''
-        CREATE TABLE IF NOT EXISTS $tableCityFoods (
-          $columnRelCityId INTEGER NOT NULL, $columnRelFoodName TEXT NOT NULL,
-          PRIMARY KEY ($columnRelCityId, $columnRelFoodName),
-          FOREIGN KEY ($columnRelCityId) REFERENCES $tableCities ($columnCityId),
-          FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods ($columnName)
-        )
-      ''');
+      CREATE TABLE IF NOT EXISTS $tableCityFoods (
+        $columnRelCityId INTEGER NOT NULL,
+        $columnRelFoodName TEXT NOT NULL,
+        $columnInsiderTipEn TEXT, -- <-- YENİ: Tablo oluşturma sorgusuna eklendi.
+        PRIMARY KEY ($columnRelCityId, $columnRelFoodName),
+        FOREIGN KEY ($columnRelCityId) REFERENCES $tableCities($columnCityId),
+        FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods($columnName)
+      )
+    ''');
   }
 
   Future<void> batchUpsert(List<FoodDetails> foods) async {
@@ -150,8 +176,8 @@ class DatabaseHelper {
     for (var food in foods) {
       final map = {
         columnName: food.name,
-        columnEnglishName: food.englishName, // <--- HATA BURADAYDI, DÜZELTİLDİ
-        columnTurkishName: food.turkishName, // <--- HATA BURADAYDI, DÜZELTİLDİ
+        columnEnglishName: food.englishName,
+        columnTurkishName: food.turkishName,
         columnImageUrl: food.imageUrl,
         columnStoryEn: food.storyEn,
         columnIngredientsEn: food.ingredientsEn,
@@ -159,19 +185,21 @@ class DatabaseHelper {
         columnPairingEn: food.pairingEn,
         columnSpiceLevel: food.spiceLevel,
         columnIsVegetarian: food.isVegetarian ? 1 : 0,
-        columnContainsGluten: food.containsGluten ? 1 : 0,
+        columnContainsGluten: food.isVegetarian ? 1 : 0,
         columnContainsDairy: food.containsDairy ? 1 : 0,
         columnContainsNuts: food.containsNuts ? 1 : 0,
         columnCalorieInfoEn: food.calorieInfoEn,
       };
-      batch.insert(tableFoods, map, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(tableFoods, map,
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
 
   Future<FoodDetails?> getFoodByName(String name) async {
     final db = await instance.database;
-    final maps = await db.query(tableFoods, where: '$columnName = ?', whereArgs: [name]);
+    final maps =
+        await db.query(tableFoods, where: '$columnName = ?', whereArgs: [name]);
     if (maps.isNotEmpty) {
       final map = maps.first;
       return FoodDetails(
@@ -198,7 +226,8 @@ class DatabaseHelper {
     final db = await instance.database;
     final batch = db.batch();
     for (var city in cities) {
-      batch.insert(tableCities, city.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(tableCities, city.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -207,7 +236,9 @@ class DatabaseHelper {
     final db = await instance.database;
     final batch = db.batch();
     for (var relation in relations) {
-      batch.insert(tableCityFoods, relation.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      // CityFood modeli güncellendiği için toMap() metodu otomatik olarak yeni veriyi içerecektir.
+      batch.insert(tableCityFoods, relation.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -220,23 +251,30 @@ class DatabaseHelper {
 
   Future<List<String>> getFoodNamesForCity(int cityId) async {
     final db = await instance.database;
-    final List<Map<String, dynamic>> maps = await db.query(tableCityFoods, columns: [columnRelFoodName], where: '$columnRelCityId = ?', whereArgs: [cityId]);
-    return List.generate(maps.length, (i) => maps[i][columnRelFoodName] as String);
+    final List<Map<String, dynamic>> maps = await db.query(tableCityFoods,
+        columns: [columnRelFoodName],
+        where: '$columnRelCityId = ?',
+        whereArgs: [cityId]);
+    return List.generate(
+        maps.length, (i) => maps[i][columnRelFoodName] as String);
   }
 
   Future<void> addFavorite(String foodName) async {
     final db = await instance.database;
-    await db.insert(tableUserFavorites, {columnFavFoodName: foodName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(tableUserFavorites, {columnFavFoodName: foodName},
+        conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   Future<void> removeFavorite(String foodName) async {
     final db = await instance.database;
-    await db.delete(tableUserFavorites, where: '$columnFavFoodName = ?', whereArgs: [foodName]);
+    await db.delete(tableUserFavorites,
+        where: '$columnFavFoodName = ?', whereArgs: [foodName]);
   }
 
   Future<bool> isFavorite(String foodName) async {
     final db = await instance.database;
-    final result = await db.query(tableUserFavorites, where: '$columnFavFoodName = ?', whereArgs: [foodName]);
+    final result = await db.query(tableUserFavorites,
+        where: '$columnFavFoodName = ?', whereArgs: [foodName]);
     return result.isNotEmpty;
   }
 
@@ -245,11 +283,14 @@ class DatabaseHelper {
     final favoriteMaps = await db.query(tableUserFavorites);
     if (favoriteMaps.isEmpty) return [];
 
-    final foodNames = favoriteMaps.map((map) => map[columnFavFoodName] as String).toList();
+    final foodNames =
+        favoriteMaps.map((map) => map[columnFavFoodName] as String).toList();
     List<FoodDetails> favoriteFoods = [];
     for (String name in foodNames) {
       final foodDetail = await getFoodByName(name);
-      if (foodDetail != null) { favoriteFoods.add(foodDetail); }
+      if (foodDetail != null) {
+        favoriteFoods.add(foodDetail);
+      }
     }
     favoriteFoods.sort((a, b) => a.turkishName.compareTo(b.turkishName));
     return favoriteFoods;
@@ -257,15 +298,18 @@ class DatabaseHelper {
 
   Future<void> addTastedFood(TastedFood tastedFood) async {
     final db = await instance.database;
-    await db.insert(tableUserTastedFoods, tastedFood.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(tableUserTastedFoods, tastedFood.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<TastedFood>> getAllTastedFoods() async {
     final db = await instance.database;
-    final List<Map<String, dynamic>> maps = await db.query(tableUserTastedFoods, orderBy: '$columnTastedDate DESC');
+    final List<Map<String, dynamic>> maps =
+        await db.query(tableUserTastedFoods, orderBy: '$columnTastedDate DESC');
     return List.generate(maps.length, (i) => TastedFood.fromMap(maps[i]));
   }
-   Future<Map<String, String>> getAllFoodNamesForMatching() async {
+
+  Future<Map<String, String>> getAllFoodNamesForMatching() async {
     final db = await instance.database;
     final List<Map<String, dynamic>> maps = await db.query(
       tableFoods,
@@ -274,37 +318,54 @@ class DatabaseHelper {
 
     final Map<String, String> foodNameMap = {};
     for (var map in maps) {
-      // Türkçe ismi küçük harfe çevirerek anahtar yapıyoruz.
-      // Değer olarak da yemeğin asıl 'name' ID'sini saklıyoruz.
       final turkishName = (map[columnTurkishName] as String).toLowerCase();
       final nameId = map[columnName] as String;
       foodNameMap[turkishName] = nameId;
     }
     return foodNameMap;
   }
-  // Bu metodu lib/services/database_helper.dart dosyasının içine ekle.
 
-  // Veritabanındaki TÜM yemeklerin detaylarını getirir.
   Future<List<FoodDetails>> getAllFoods() async {
     final db = await instance.database;
-    // 'foods' tablosundaki tüm satırları, Türkçe isme göre alfabetik sıralayarak çekiyoruz.
-    final List<Map<String, dynamic>> maps = await db.query(
-      tableFoods,
-      orderBy: '$columnTurkishName ASC'
-    );
+    final List<Map<String, dynamic>> maps =
+        await db.query(tableFoods, orderBy: '$columnTurkishName ASC');
 
-    // Çektiğimiz her bir map'i (satırı) FoodDetails nesnesine dönüştürüyoruz.
-    // getFoodByName bu işi zaten yapıyor ama tüm listeyi tek seferde dönmek daha performanslı olabilir.
-    // Şimdilik mevcut yapıyı kullanarak ilerleyelim.
     List<FoodDetails> foods = [];
     for (var map in maps) {
-      // Map'teki name (ID) üzerinden tam detayları alalım.
       final foodDetail = await getFoodByName(map[columnName] as String);
       if (foodDetail != null) {
         foods.add(foodDetail);
       }
     }
-    
     return foods;
+  }
+
+  // lib/services/database_helper.dart dosyasının İÇİNE ve en ALTINA ekle
+
+  Future<List<FoodTip>> getFoodTipsForCity(int cityId) async {
+    final db = await instance.database;
+
+    // SQL'in gücünü kullanıyoruz: İki tabloyu (city_foods ve foods) birleştirerek
+    // hem ipucunu hem de o ipucuna ait yemeğin Türkçe ismini tek seferde çekiyoruz.
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+    SELECT
+      T1.$columnInsiderTipEn,
+      T2.$columnTurkishName
+    FROM $tableCityFoods AS T1
+    INNER JOIN $tableFoods AS T2 ON T1.$columnRelFoodName = T2.$columnName
+    WHERE T1.$columnRelCityId = ? AND T1.$columnInsiderTipEn IS NOT NULL AND T1.$columnInsiderTipEn != ''
+  ''', [cityId]);
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    // Gelen her bir satırı, oluşturduğumuz FoodTip modeline dönüştürüyoruz.
+    return List.generate(maps.length, (i) {
+      return FoodTip(
+        foodDisplayName: maps[i][columnTurkishName] as String,
+        tip: maps[i][columnInsiderTipEn] as String,
+      );
+    });
   }
 }
