@@ -66,38 +66,39 @@ void initState() {
   }
 
   // <-- ADIM 3'ÜN UYGULANDIĞI YER BURASI -->
-  Future<void> _onFoodSelected(FoodDetails food) async {
+// venue_explorer_page.dart içinde
+
+Future<void> _onFoodSelected(FoodDetails food) async {
+  setState(() {
+    _selectedFood = food;
+    _isLoadingVenues = true;
+    _errorMessage = null;
+    _venues = null;
+  });
+
+  try {
+    final position = await _placesService.getCurrentLocation();
+    
+    // DEĞİŞİKLİK BURADA: findRestaurants metodunu isimlendirilmiş parametreler ile çağırıyoruz.
+    final results = await _placesService.findRestaurants(
+      foodName: food.turkishName,    // "foodName:" eklendi
+      foodCategory: food.foodCategory,   // "foodCategory:" eklendi
+      position: position             // "position:" eklendi
+    );
+
     setState(() {
-      _selectedFood = food;
-      _isLoadingVenues = true;
-      _errorMessage = null;
-      _venues = null;
+      _venues = results;
     });
-
-    try {
-      final position = await _placesService.getCurrentLocation();
-      
-      // DEĞİŞİKLİK: findRestaurants metodunu artık 3 parametre ile çağırıyoruz.
-      // Yemeğin adını, kategorisini ve mevcut konumu gönderiyoruz.
-      final results = await _placesService.findRestaurants(
-        food.turkishName,    // 1. Parametre: Yemeğin adı
-        food.foodCategory,   // 2. Parametre: Yemeğin kategorisi
-        position             // 3. Parametre: Konum
-      );
-
-      setState(() {
-        _venues = results;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      setState(() {
-        _isLoadingVenues = false;
-      });
-    }
+  } catch (e) {
+    setState(() {
+      _errorMessage = e.toString();
+    });
+  } finally {
+    setState(() {
+      _isLoadingVenues = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {

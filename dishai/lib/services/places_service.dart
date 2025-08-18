@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-// Model sınıfında değişiklik yok.
 class PlaceSearchResult {
   final String placeId;
   final String name;
@@ -28,8 +27,8 @@ class PlaceSearchResult {
       address: json['vicinity'],
       rating: (json['rating'] as num?)?.toDouble(),
       photoReference: (json['photos'] as List?)?.isNotEmpty ?? false
-        ? json['photos'][0]['photo_reference']
-        : null,
+          ? json['photos'][0]['photo_reference']
+          : null,
     );
   }
 }
@@ -40,7 +39,6 @@ class PlacesService {
 
   PlacesService({required this.apiKey});
 
-  // Bu metotlarda değişiklik yok.
   Future<Position> getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -70,70 +68,84 @@ class PlacesService {
     return "$_baseUrl/photo?maxwidth=400&photoreference=$photoReference&key=$apiKey";
   }
 
-  // <-- ASIL GÜNCELLEME BURADA BAŞLIYOR -->
-  // Metot artık String? foodCategory parametresi alıyor.
-  Future<List<PlaceSearchResult>> findRestaurants(String foodName, String? foodCategory, Position position) async {
+  // --- GOOGLE MANTIĞI İLE ÇALIŞAN YENİ findRestaurants ALGORİTMASI ---
+  Future<List<PlaceSearchResult>> findRestaurants({
+    required String foodName,
+    required String? foodCategory,
+    required Position position,
+  }) async {
     final location = "${position.latitude},${position.longitude}";
     List<PlaceSearchResult> finalResults = [];
 
-    // --- TATLI, HAMUR İŞİ & KAHVALTI İÇİN ÖZEL ARAMA STRATEJİSİ ---
-    if (foodCategory == 'dessert' || foodCategory == 'pastry_bakery' || foodCategory == 'breakfast') {
-      if (kDebugMode) print("'$foodCategory' kategorisi için özel arama stratejisi başlatıldı...");
+    // --- ARAMA KATMANLARINI OLUŞTUR ---
+    List<String> searchKeywords = _buildSearchPyramid(foodName, foodCategory);
+    if (kDebugMode) print("🧠 Arama Piramidi: $searchKeywords");
 
-      // Kategoriye özel genel bir arama terimi belirliyoruz.
-      String fallbackKeyword;
-      switch(foodCategory) {
-        case 'dessert':
-          fallbackKeyword = 'tatlı';
-          break;
-        case 'pastry_bakery':
-          fallbackKeyword = 'pide fırın';
-          break;
-        case 'breakfast':
-          fallbackKeyword = 'kahvaltı';
-          break;
-        default:
-          fallbackKeyword = foodName;
-      }
-      
-      // 1. ÖNCELİK: Restoranlar (Geleneksel Tatlıcılar, Pideciler, Kahvaltı Salonları)
-      final restaurantResults = await _performNearbySearch(keyword: '"$foodName" OR "$fallbackKeyword"', placeType: 'restaurant', location: location);
-      finalResults.addAll(restaurantResults);
-      
-      // 2. ÖNCELİK: Fırınlar / Pastaneler (Bakery)
-      final bakeryResults = await _performNearbySearch(keyword: '"$foodName"', placeType: 'bakery', location: location);
-      finalResults.addAll(bakeryResults);
+    // --- KATMAN KATMAN ARA VE YETERLİ SONUÇ BULUNCA DUR ---
+    for (String keyword in searchKeywords) {
+      if (kDebugMode) print("🔍 Aranıyor: '$keyword'...");
+      final newResults = await _performNearbySearch(keyword: keyword, placeType: 'restaurant', location: location);
+      finalResults.addAll(newResults);
 
-      // 3. ÖNCELİK (SON TERCİH): Kafeler (Cafe)
-      final cafeResults = await _performNearbySearch(keyword: '"$foodName"', placeType: 'cafe', location: location);
-      finalResults.addAll(cafeResults);
-    }
-    // --- DİĞER TÜM KATEGORİLER İÇİN STANDART ARAMA STRATEJİSİ ---
-    else {
-      if (kDebugMode) print("'$foodCategory' kategorisi için standart arama stratejisi başlatıldı...");
+      // Tekrarlananları temizle ve sayısını kontrol et
+      final uniqueIds = <String>{};
+      final uniqueResults = finalResults.where((place) => uniqueIds.add(place.placeId)).toList();
+      finalResults = uniqueResults;
       
-      // 1. Önce doğrudan yemeğin adıyla restoranları arayalım.
-      final specificResults = await _performNearbySearch(keyword: '"$foodName"', placeType: 'restaurant', location: location);
-      finalResults.addAll(specificResults);
-      
-      // 2. Eğer spesifik arama sonuç vermezse, genel "Türk Restoranı" araması yapalım.
-      if (finalResults.isEmpty) {
-         if (kDebugMode) print("Spesifik arama sonuç vermedi, 'Turkish Restaurant' için genel arama yapılıyor...");
-         final fallbackResults = await _performNearbySearch(keyword: 'Turkish Restaurant', placeType: 'restaurant', location: location);
-         finalResults.addAll(fallbackResults);
+      // Eğer yeterli sayıda (örn: 10) sonuç bulduysak, daha fazla arama yapmaya gerek yok.
+      if (finalResults.length >= 10) {
+        if (kDebugMode) print("✅ Yeterli sonuç bulundu (${finalResults.length}), arama durduruluyor.");
+        break;
       }
     }
     
-    // Sonuçları birleştirdikten sonra, tekrarlanan yerleri (aynı place_id'ye sahip) temizleyelim.
-    final uniqueResults = <String, PlaceSearchResult>{};
-    for (var result in finalResults) {
-      uniqueResults[result.placeId] = result;
-    }
-    
-    return uniqueResults.values.toList();
+    if (kDebugMode) print("🏆 Toplam benzersiz sonuç: ${finalResults.length}");
+    return finalResults;
   }
 
-  // Yardımcı metot.
+  // YARDIMCI METOT 1: Arama piramidini (katmanlarını) oluşturan beyin.
+  List<String> _buildSearchPyramid(String foodName, String? foodCategory) {
+    
+    // Kategoriye özel mekan türü anahtar kelimeleri
+    const categoryKeywords = {
+      'dessert': 'Tatlıcı Pastane',
+      'pastry_bakery': 'Pide Lahmacun Fırın',
+      'street_food': 'Büfe Dürüm Kokoreç',
+      'seafood': 'Balık Restoranı',
+      'kebab': 'Kebapçı Izgara',
+      'soup': 'Çorbacı',
+      'breakfast': 'Kahvaltı Salonu Serpme Kahvaltı',
+      'appetizer_meze': 'Meyhane Meze Evi',
+    };
+
+    final searchPyramid = <String>{}; // Set kullanarak otomatik tekilleştirme
+
+    // Katman 1: Tam isim
+    searchPyramid.add('"$foodName"');
+
+    // Katman 2: Anahtar kelime (örn: "Antep Lahmacunu" -> "Lahmacunu")
+    final parts = foodName.split(' ');
+    if (parts.length > 1) {
+      // "Sütlacı" veya "Kebabı" gibi son ekleri atmak için basit bir kontrol
+      String lastPart = parts.last;
+      if(lastPart.endsWith('ı') || lastPart.endsWith('i') || lastPart.endsWith('u') || lastPart.endsWith('ü')){
+         lastPart = lastPart.substring(0, lastPart.length - 1);
+      }
+      searchPyramid.add('"$lastPart"');
+    }
+
+    // Katman 3: Kategori ipucu
+    if (foodCategory != null && categoryKeywords.containsKey(foodCategory)) {
+      searchPyramid.add(categoryKeywords[foodCategory]!);
+    }
+
+    // Katman 4: Güvenli Liman
+    searchPyramid.add('Turkish Restaurant');
+
+    return searchPyramid.toList();
+  }
+
+  // YARDIMCI METOT 2: API isteğini yapan kod.
   Future<List<PlaceSearchResult>> _performNearbySearch({
     required String keyword,
     required String placeType,
