@@ -86,8 +86,8 @@ class DatabaseHelper {
         $columnImageUrl TEXT, $columnStoryEn TEXT, $columnIngredientsEn TEXT, $columnPronunciationText TEXT,
         $columnPairingEn TEXT, $columnSpiceLevel INTEGER, $columnIsVegetarian INTEGER NOT NULL,
         $columnContainsGluten INTEGER NOT NULL, $columnContainsDairy INTEGER NOT NULL, $columnContainsNuts INTEGER NOT NULL,
-        $columnCalorieInfoEn TEXT
-           $columnFoodCategory TEXT -- <-- 4. DEĞİŞİKLİK: CREATE TABLE sorgusuna ekle.
+        $columnCalorieInfoEn TEXT,
+           $columnFoodCategory TEXT
       )
     ''');
     await _createCityTables(db, isUpgrade: false);
