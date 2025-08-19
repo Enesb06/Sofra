@@ -8,6 +8,8 @@ class City {
   final String? localDrinksEn;
   final String? postMealSuggestionsEn;
   final String? iconicDishName;
+   final String? greetingsEn;
+  final String? categoryPromptEn;
 
   City({
     required this.id,
@@ -17,6 +19,8 @@ class City {
     this.localDrinksEn,
     this.postMealSuggestionsEn,
     this.iconicDishName,
+    this.greetingsEn,
+    this.categoryPromptEn,
   });
 
   factory City.fromMap(Map<String, dynamic> map) {
@@ -28,6 +32,8 @@ class City {
       localDrinksEn: map['local_drinks_en'],
       postMealSuggestionsEn: map['post_meal_suggestions_en'],
       iconicDishName: map['iconic_dish_name'],
+            greetingsEn: map['greetings_en'],
+      categoryPromptEn: map['category_prompt_en'],
     );
   }
 
@@ -40,6 +46,8 @@ class City {
       'local_drinks_en': localDrinksEn,
       'post_meal_suggestions_en': postMealSuggestionsEn,
       'iconic_dish_name': iconicDishName,
+      'greetings_en': greetingsEn,
+      'category_prompt_en': categoryPromptEn,
     };
   }
 }

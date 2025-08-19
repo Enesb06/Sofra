@@ -17,11 +17,14 @@ const String GOOGLE_API_KEY = "AIzaSyAELUVYZwhbFA5XCmmo_K59v44R36_do8U";
 class VenueExplorerPage extends StatefulWidget {
   final City city;
   final bool showAllTurkishFoods;
+   final String? selectedCategory; // <-- YENİ PARAMETRE
+
 
   const VenueExplorerPage({
     super.key,
     required this.city,
     this.showAllTurkishFoods = false,
+      this.selectedCategory, // <-- YENİ PARAMETRE
   });
 
   @override
@@ -37,12 +40,21 @@ class _VenueExplorerPageState extends State<VenueExplorerPage> {
   bool _isLoadingVenues = false;
   String? _errorMessage;
 
- @override
+// _VenueExplorerPageState içindeki initState metodunu bununla değiştir.
+
+@override
 void initState() {
   super.initState();
-  if (widget.showAllTurkishFoods) {
+  
+  // <-- YENİ AKILLI FİLTRELEME MANTIĞI -->
+  if (widget.selectedCategory != null) {
+    // Eğer bir kategori belirtilmişse, SADECE o kategorideki yemekleri yükle.
+    _foodsFuture = DatabaseHelper.instance.getFoodsByCategory(widget.selectedCategory!);
+  } else if (widget.showAllTurkishFoods) {
+    // Kategori yok ama "tüm Türk yemekleri" istenmişse, hepsini yükle.
     _foodsFuture = _getAllFoods();
   } else {
+    // Hiçbiri değilse, sadece o şehre özel lokal yemekleri yükle.
     _foodsFuture = _getFoodsForCity();
   }
 }
@@ -69,6 +81,7 @@ void initState() {
 // venue_explorer_page.dart içinde
 
 Future<void> _onFoodSelected(FoodDetails food) async {
+  // Bu ilk setState güvenli, çünkü herhangi bir bekleme (await) öncesinde çalışıyor.
   setState(() {
     _selectedFood = food;
     _isLoadingVenues = true;
@@ -79,24 +92,36 @@ Future<void> _onFoodSelected(FoodDetails food) async {
   try {
     final position = await _placesService.getCurrentLocation();
     
-    // DEĞİŞİKLİK BURADA: findRestaurants metodunu isimlendirilmiş parametreler ile çağırıyoruz.
+    // İnternetten veri çekme işleminden SONRA, setState demeden ÖNCE kontrol ediyoruz.
+    // Kullanıcı bu bekleme sırasında sayfadan ayrılmış olabilir mi?
+    if (!mounted) return; // Eğer sayfadan ayrılmışsa, fonksiyondan çık ve hiçbir şey yapma.
+
     final results = await _placesService.findRestaurants(
-      foodName: food.turkishName,    // "foodName:" eklendi
-      foodCategory: food.foodCategory,   // "foodCategory:" eklendi
-      position: position             // "position:" eklendi
+      foodName: food.turkishName,
+      foodCategory: food.foodCategory,
+      position: position
     );
 
-    setState(() {
-      _venues = results;
-    });
+    // Tekrar kontrol ediyoruz, çünkü bu işlem de zaman alabilir.
+    if (mounted) {
+      setState(() {
+        _venues = results;
+      });
+    }
   } catch (e) {
-    setState(() {
-      _errorMessage = e.toString();
-    });
+    // Hata durumunda bile kontrol ediyoruz.
+    if (mounted) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    }
   } finally {
-    setState(() {
-      _isLoadingVenues = false;
-    });
+    // Her şey bittiğinde, yükleniyor durumunu kapatırken BİLE kontrol ediyoruz.
+    if (mounted) {
+      setState(() {
+        _isLoadingVenues = false;
+      });
+    }
   }
 }
 
