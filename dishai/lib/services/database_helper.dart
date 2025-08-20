@@ -10,11 +10,13 @@ import '../models/city_model.dart';
 import '../models/city_food_model.dart';
 import '../models/tasted_food_model.dart';
 import '../models/food_tip_model.dart';
+import '../models/route_model.dart';
+import '../models/route_stop_model.dart';
 
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // Veritabanı şeması değiştiği için versiyonu artırıyoruz (cities'e yeni sütunlar).
-  static const _databaseVersion = 8;
+  static const _databaseVersion = 12;
 
   // Tablo ve Sütun Sabitleri (Değişiklik Yok)
   static const tableFoods = 'foods';
@@ -62,6 +64,31 @@ class DatabaseHelper {
 
   static const tableUserFavorites = 'user_favorites';
   static const columnFavFoodName = 'food_name';
+
+    // --- YENİ TABLO VE SÜTUN SABİTLERİ ---
+  static const tableRoutes = 'routes';
+  static const columnRouteId = 'id';
+  static const columnRouteCityId = 'city_id';
+  static const columnRouteTitleEn = 'title_en';
+  static const columnRouteDescriptionEn = 'description_en';
+  static const columnRouteCoverImageUrl = 'cover_image_url';
+  static const columnRouteDifficulty = 'difficulty';
+  static const columnRouteDurationWalking = 'duration_walking_mins';
+  static const columnRouteDurationTransit = 'duration_transit_mins';
+  static const columnRouteDurationDriving = 'duration_driving_mins';
+  static const columnRouteTravelWalking = 'travel_walking_mins';
+  static const columnRouteTravelTransit = 'travel_transit_mins';
+  static const columnRouteTravelDriving = 'travel_driving_mins';
+
+  static const tableRouteStops = 'route_stops';
+  static const columnStopId = 'id';
+  static const columnStopRouteId = 'route_id';
+  static const columnStopNumber = 'stop_number';
+  static const columnStopGooglePlaceId = 'google_place_id';
+  static const columnStopVenueName = 'venue_name';
+  static const columnStopNotesEn = 'stop_notes_en';
+  static const columnStopLatitude = 'latitude';
+  static const columnStopLongitude = 'longitude';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -113,6 +140,7 @@ class DatabaseHelper {
         FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods($columnName)
       )
     ''');
+    await _createRouteTables(db);
     
     await _createPassportTables(db);
   }
@@ -136,6 +164,113 @@ class DatabaseHelper {
         if (kDebugMode) { print("❗️ v8 Yükseltmesi sırasında HATA (Sütunlar zaten var olabilir): $e"); }
       }
     }
+     // YENİ GÜNCELLEME: Versiyon 9'a geçerken bu blok çalışacak.
+    if (oldVersion < 9) {
+      await _createRouteTables(db);
+      if (kDebugMode) { print("✅ v9: Rota tabloları (routes, route_stops) oluşturuldu."); }
+    }
+    if (oldVersion < 10) {
+      try {
+        // Hata almamak için önce sütun var mı diye kontrol edip sonra silmek en güvenlisidir,
+        // ama sqflite'da bu karmaşık. ALTER TABLE ile devam ediyoruz.
+        // Eski sütunu silmeye çalış, hata verirse yoksay.
+        try {
+          await db.execute('ALTER TABLE $tableRoutes DROP COLUMN estimated_duration_mins');
+        } catch (e) {
+          if (kDebugMode) print("Bilgi: 'estimated_duration_mins' sütunu zaten yoktu.");
+        }
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteDurationWalking INTEGER');
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteDurationTransit INTEGER');
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteDurationDriving INTEGER');
+        if (kDebugMode) { print("✅ v10: Rota tablosu ulaşım süreleri sütunlarıyla güncellendi."); }
+      } catch (e) {
+        if (kDebugMode) { print("❗️ v10 Yükseltmesi sırasında HATA: $e"); }
+      }
+    }
+     if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE $tableRouteStops ADD COLUMN $columnStopVenueName TEXT NOT NULL DEFAULT ""');
+      } catch (e) { if (kDebugMode) print("v11 Yükseltme Hatası: $e"); }
+    }
+     if (oldVersion < 12) {
+      try {
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteTravelWalking INTEGER');
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteTravelTransit INTEGER');
+        await db.execute('ALTER TABLE $tableRoutes ADD COLUMN $columnRouteTravelDriving INTEGER');
+        if (kDebugMode) print("✅ v12: Rota tablosuna yolculuk süreleri sütunları eklendi.");
+      } catch (e) { if (kDebugMode) print("v12 Yükseltme Hatası: $e"); }
+    }
+
+  }
+  
+   // --- YENİ: Rota tablolarını oluşturan yardımcı metot ---
+     Future<void> _createRouteTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableRoutes (
+        $columnRouteId INTEGER PRIMARY KEY, $columnRouteCityId INTEGER NOT NULL,
+        $columnRouteTitleEn TEXT NOT NULL, $columnRouteDescriptionEn TEXT NOT NULL,
+        $columnRouteCoverImageUrl TEXT NOT NULL, $columnRouteDifficulty TEXT NOT NULL,
+        $columnRouteDurationWalking INTEGER, $columnRouteDurationTransit INTEGER,
+        $columnRouteDurationDriving INTEGER, $columnRouteTravelWalking INTEGER,
+        $columnRouteTravelTransit INTEGER, $columnRouteTravelDriving INTEGER,
+        FOREIGN KEY ($columnRouteCityId) REFERENCES cities(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableRouteStops (
+        $columnStopId INTEGER PRIMARY KEY, $columnStopRouteId INTEGER NOT NULL,
+        $columnStopNumber INTEGER NOT NULL, $columnStopGooglePlaceId TEXT NOT NULL,
+        $columnStopVenueName TEXT NOT NULL, -- <-- EKSİK OLAN SÜTUN ARTIK BURADA!
+        $columnStopNotesEn TEXT NOT NULL,
+        $columnStopLatitude REAL NOT NULL, $columnStopLongitude REAL NOT NULL,
+        FOREIGN KEY ($columnStopRouteId) REFERENCES $tableRoutes($columnRouteId)
+      )
+    ''');
+  }
+   // ==========================================================
+  // --- YENİ ROTA VERİTABANI METOTLARI ---
+  // ==========================================================
+
+  Future<void> batchUpsertRoutes(List<RouteModel> routes) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (var route in routes) {
+      batch.insert(tableRoutes, route.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> batchUpsertRouteStops(List<RouteStop> stops) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (var stop in stops) {
+      batch.insert(tableRouteStops, stop.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Bir şehre ait tüm rotaları getirir.
+  Future<List<RouteModel>> getRoutesForCity(int cityId) async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableRoutes,
+      where: '$columnRouteCityId = ?',
+      whereArgs: [cityId],
+      orderBy: '$columnRouteTitleEn ASC',
+    );
+    return List.generate(maps.length, (i) => RouteModel.fromMap(maps[i]));
+  }
+
+  /// Bir rotaya ait tüm durakları, durak sırasına göre getirir.
+  Future<List<RouteStop>> getStopsForRoute(int routeId) async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableRouteStops,
+      where: '$columnStopRouteId = ?',
+      whereArgs: [routeId],
+      orderBy: '$columnStopNumber ASC',
+    );
+    return List.generate(maps.length, (i) => RouteStop.fromMap(maps[i]));
   }
   
   Future<void> _createPassportTables(Database db) async {

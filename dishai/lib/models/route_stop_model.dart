@@ -1,14 +1,14 @@
+// lib/models/route_stop_model.dart
+
 class RouteStop {
   final int id;
   final int routeId;
   final int stopNumber;
   final String googlePlaceId;
   final String stopNotesEn;
-  // Harita üzerinde daha performanslı çalışmak için lat/lng bilgilerini de ekliyoruz.
-  // Bu bilgiyi Supabase'den çekmek en iyisi olacaktır.
   final double latitude;
   final double longitude;
-
+  final String venueName; 
 
   RouteStop({
     required this.id,
@@ -18,6 +18,7 @@ class RouteStop {
     required this.stopNotesEn,
     required this.latitude,
     required this.longitude,
+    required this.venueName,
   });
 
   factory RouteStop.fromMap(Map<String, dynamic> map) {
@@ -29,6 +30,9 @@ class RouteStop {
       stopNotesEn: map['stop_notes_en'],
       latitude: (map['latitude'] as num).toDouble(),
       longitude: (map['longitude'] as num).toDouble(),
+      // --- DÜZELTME BURADA ---
+      // Eğer 'venue_name' null gelirse, varsayılan olarak "Unnamed Stop" ata.
+      venueName: map['venue_name'] ?? 'Unnamed Stop', 
     );
   }
 
@@ -41,6 +45,7 @@ class RouteStop {
       'stop_notes_en': stopNotesEn,
       'latitude': latitude,
       'longitude': longitude,
+      'venue_name': venueName,
     };
   }
 }

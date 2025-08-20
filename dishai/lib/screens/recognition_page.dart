@@ -19,6 +19,10 @@ import 'show_to_waiter_page.dart';
 import '../models/city_model.dart';
 import '../models/city_food_model.dart';
 
+import '../models/route_model.dart';
+import '../models/route_stop_model.dart';
+import '../services/sync_service.dart'; 
+
 final supabase = Supabase.instance.client;
 
 // --- CHAT MESAJ MODELLERİ ---
@@ -108,36 +112,80 @@ class _RecognitionPageState extends State<RecognitionPage> {
   Future<void> _initialize() async {
     await Future.wait([_loadModel(), _syncDataWithSupabase()]);
   }
-  Future<void> _syncDataWithSupabase() async {
-    setState(() { _syncStatusMessage = "Connecting to knowledge base..."; });
-    try {
-      final response = await supabase.from('foods').select();
-      final foodList = (response as List).map((item) => FoodDetails.fromJson(item)).toList();
-      if (foodList.isNotEmpty) {
-        setState(() { _syncStatusMessage = "Syncing local gastronomy atlas..."; });
-        await DatabaseHelper.instance.batchUpsert(foodList);
-      }
-      if (kDebugMode) print("✅ Senkronizasyon tamamlandı. ${foodList.length} yemek yerel veritabanında.");
-      // 2. ŞEHİRLERİ SENKRONİZE ET
-      setState(() { _syncStatusMessage = "Mapping cities..."; });
-      final citiesResponse = await supabase.from('cities').select();
-      final cityList = (citiesResponse as List).map((e) => City.fromMap(e)).toList();
-      await DatabaseHelper.instance.batchUpsertCities(cityList);
-      if (kDebugMode) print("✅ Şehir senkronizasyonu tamamlandı: ${cityList.length} şehir.");
+// recognition_page.dart dosyasındaki _RecognitionPageState class'ı içinde
 
-       // 3. ŞEHİR-YEMEK İLİŞKİLERİNİ SENKRONİZE ET
-      setState(() { _syncStatusMessage = "Building flavor connections..."; });
-      final cityFoodsResponse = await supabase.from('city_foods').select();
-      final cityFoodList = (cityFoodsResponse as List).map((e) => CityFood.fromMap(e)).toList();
-      await DatabaseHelper.instance.batchUpsertCityFoods(cityFoodList);
-      if (kDebugMode) print("✅ Şehir-Yemek ilişkileri senkronizasyonu tamamlandı: ${cityFoodList.length} ilişki.");
+Future<void> _syncDataWithSupabase() async {
+  SyncService.isSyncCompleted.value = false;
+  setState(() { _syncStatusMessage = "Connecting to knowledge base..."; });
+  try {
+    // 1. YEMEKLERİ SENKRONİZE ET
+    final response = await supabase.from('foods').select();
+    final foodList = (response as List).map((item) => FoodDetails.fromJson(item)).toList();
+    if (foodList.isNotEmpty) {
+      setState(() { _syncStatusMessage = "Syncing local gastronomy atlas..."; });
+      await DatabaseHelper.instance.batchUpsert(foodList);
+    }
+    if (kDebugMode) print("✅ Yemek senkronizasyonu tamamlandı: ${foodList.length} yemek.");
+
+    // 2. ŞEHİRLERİ SENKRONİZE ET
+    setState(() { _syncStatusMessage = "Mapping cities..."; });
+    final citiesResponse = await supabase.from('cities').select();
+    final cityList = (citiesResponse as List).map((e) => City.fromMap(e)).toList();
+    await DatabaseHelper.instance.batchUpsertCities(cityList);
+    if (kDebugMode) print("✅ Şehir senkronizasyonu tamamlandı: ${cityList.length} şehir.");
+
+    // 3. ŞEHİR-YEMEK İLİŞKİLERİNİ SENKRONİZE ET
+    setState(() { _syncStatusMessage = "Building flavor connections..."; });
+    final cityFoodsResponse = await supabase.from('city_foods').select();
+    final cityFoodList = (cityFoodsResponse as List).map((e) => CityFood.fromMap(e)).toList();
+    await DatabaseHelper.instance.batchUpsertCityFoods(cityFoodList);
+    if (kDebugMode) print("✅ Şehir-Yemek ilişkileri senkronizasyonu tamamlandı: ${cityFoodList.length} ilişki.");
       
-    } catch (e) {
-      if (kDebugMode) print("❗️ Senkronizasyon sırasında HATA: $e");
-    } finally {
-      if (mounted) { setState(() { _isSyncing = false; }); }
+    // 4. GURME ROTALARINI SENKRONİZE ET
+    setState(() { _syncStatusMessage = "Curating gourmet routes..."; });
+    final routesResponse = await supabase.from('routes').select();
+    final routeList = (routesResponse as List).map((e) => RouteModel.fromMap(e)).toList();
+    await DatabaseHelper.instance.batchUpsertRoutes(routeList);
+    if (kDebugMode) print("✅ Rota senkronizasyonu tamamlandı: ${routeList.length} rota.");
+
+    // ==========================================================
+    // --- 5. ROTA DURAKLARINI SENKRONİZE ET (DEBUG BÖLÜMÜ) ---
+    // ==========================================================
+    setState(() { _syncStatusMessage = "Pinpointing delicious stops..."; });
+    final stopsResponse = await supabase.from('route_stops').select();
+    
+    // --- 1. İŞARET FİŞEĞİ: Supabase'den veri geldi mi?
+    print("DEBUG: Supabase'den ${stopsResponse.length} adet durak çekildi.");
+
+    // Veri varsa, içeriğini görelim
+    if (stopsResponse.isNotEmpty) {
+      print("DEBUG: Çekilen ilk durak verisi (ham): ${stopsResponse.first}");
+    }
+
+    // Veriyi Dart modeline çeviriyoruz
+    final stopList = (stopsResponse as List).map((e) => RouteStop.fromMap(e)).toList();
+
+    // --- 2. İŞARET FİŞEĞİ: Model doğru oluştu mu?
+    if (stopList.isNotEmpty) {
+      print("DEBUG: İlk durak başarıyla modele çevrildi: Adı='${stopList.first.venueName}', Not='${stopList.first.stopNotesEn}'");
+    }
+    
+    // Modeli yerel veritabanına yazıyoruz
+    await DatabaseHelper.instance.batchUpsertRouteStops(stopList);
+    
+    // --- 3. İŞARET FİŞEĞİ: Yazma işlemi başarılı oldu mu?
+    print("✅ DEBUG: ${stopList.length} adet durak yerel veritabanına yazma komutu başarıyla gönderildi.");
+    // ==========================================================
+
+  } catch (e) {
+    if (kDebugMode) print("❗️❗️❗️ DEBUG: SENKRONİZASYON SIRASINDA KRİTİK HATA: $e");
+  } finally {
+    if (mounted) { 
+      setState(() { _isSyncing = false; });
+      SyncService.isSyncCompleted.value = true;
     }
   }
+}
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('assets/model.tflite');

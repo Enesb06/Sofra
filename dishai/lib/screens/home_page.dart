@@ -1,9 +1,10 @@
-// GÜNCELLENMİŞ DOSYA: lib/screens/home_page.dart
+// lib/screens/home_page.dart
 
 import 'package:flutter/material.dart';
 import 'recognition_page.dart';
 import 'discover_page.dart';
-import 'menu_scanner_page.dart'; // <-- YENİ İMPORT
+import 'menu_scanner_page.dart';
+import 'routes_list_page.dart'; // <-- YENİ İMPORT: Rota listesi sayfamız
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +20,8 @@ class _HomePageState extends State<HomePage> {
   static const List<Widget> _widgetOptions = <Widget>[
     RecognitionPage(),
     DiscoverPage(),
-    MenuScannerPage(), // <-- YENİ SAYFAYI EKLE
+    RoutesListPage(),   // <-- YENİ SAYFAYI EKLE (3. sıraya)
+    MenuScannerPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -47,7 +49,14 @@ class _HomePageState extends State<HomePage> {
             activeIcon: Icon(Icons.explore),
             label: 'Discover',
           ),
-          BottomNavigationBarItem( // <-- YENİ SEKMEYİ EKLE
+          // --- YENİ SEKMEYİ EKLE ---
+          BottomNavigationBarItem(
+            icon: Icon(Icons.route_outlined),
+            activeIcon: Icon(Icons.route),
+            label: 'Routes',
+          ),
+          // ---
+          BottomNavigationBarItem(
             icon: Icon(Icons.menu_book_outlined),
             activeIcon: Icon(Icons.menu_book),
             label: 'Scan Menu',
