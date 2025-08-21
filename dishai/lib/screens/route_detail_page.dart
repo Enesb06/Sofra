@@ -1,12 +1,11 @@
 // lib/screens/route_detail_page.dart
 
 import 'dart:async';
-import 'dart:ui' as ui; // Widget'ı resme çevirmek için gerekli
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Widget'ı resme çevirmek için gerekli
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import '../services/database_helper.dart';
 import '../models/route_model.dart';
@@ -20,10 +19,11 @@ class RouteDetailPage extends StatefulWidget {
   State<RouteDetailPage> createState() => _RouteDetailPageState();
 }
 
-class _RouteDetailPageState extends State<RouteDetailPage> {
+class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderStateMixin {
   final Completer<GoogleMapController> _mapController = Completer();
-  final PanelController _panelController = PanelController();
   late Future<List<RouteStop>> _stopsFuture;
+  late AnimationController _fadeAnimationController;
+  late Animation<double> _fadeAnimation;
   
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
@@ -33,24 +33,23 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
   void initState() {
     super.initState();
     _stopsFuture = _loadStops();
+    _fadeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+    );
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showPanelHint();
+      _fadeAnimationController.forward();
     });
   }
 
-  void _showPanelHint() async {
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (_panelController.isPanelClosed && mounted) {
-      await _panelController.animatePanelToPosition(
-        0.4,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-      );
-    }
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (_panelController.panelPosition >= 0.39 && _panelController.panelPosition <= 0.41 && mounted) {
-      await _panelController.close();
-    }
+  @override
+  void dispose() {
+    _fadeAnimationController.dispose();
+    super.dispose();
   }
 
   Future<List<RouteStop>> _loadStops() async {
@@ -70,7 +69,7 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
   Future<BitmapDescriptor> _createMarkerBitmap(String stopNumber, String venueName) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    final Size size = const Size(250, 120);
+    final Size size = const Size(280, 140);
 
     final MarkerPainter painter = MarkerPainter(stopNumber, venueName);
     painter.paint(canvas, size);
@@ -117,12 +116,12 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
 
     final Polyline routePolyline = Polyline(
       polylineId: const PolylineId('route_line'),
-      color: Colors.deepOrange,
-      width: 5,
+      color: const Color(0xFF6366F1),
+      width: 4,
       points: polylineCoordinates,
       patterns: [
-        PatternItem.dash(20.0),
-        PatternItem.gap(10.0),
+        PatternItem.dash(25.0),
+        PatternItem.gap(8.0),
       ],
     );
 
@@ -162,26 +161,24 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
     controller.animateCamera(CameraUpdate.newCameraPosition(
       CameraPosition(target: LatLng(stop.latitude, stop.longitude), zoom: 16.0),
     ));
-    if (_panelController.isPanelClosed) {
-      _panelController.open();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SlidingUpPanel(
-        controller: _panelController,
-        minHeight: MediaQuery.of(context).size.height * 0.35,
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-        parallaxEnabled: true,
-        parallaxOffset: .5,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24.0),
-          topRight: Radius.circular(24.0),
-        ),
-        body: _buildMapSection(),
-        panel: _buildSlidingPanelContent(),
+      backgroundColor: Colors.grey.shade50,
+      body: Column(
+        children: [
+          // Map section - fixed height
+          Container(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: _buildMapSection(),
+          ),
+          // Details section - scrollable
+          Expanded(
+            child: _buildDetailsSection(),
+          ),
+        ],
       ),
     );
   }
@@ -199,97 +196,216 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
           },
           markers: _markers,
           polylines: _polylines,
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.30, top: 80),
+          padding: const EdgeInsets.only(top: 100),
+          style: '''[
+            {
+              "featureType": "poi",
+              "elementType": "labels.text",
+              "stylers": [{"visibility": "off"}]
+            },
+            {
+              "featureType": "poi.business",
+              "stylers": [{"visibility": "off"}]
+            },
+            {
+              "featureType": "road",
+              "elementType": "labels.icon",
+              "stylers": [{"visibility": "off"}]
+            }
+          ]''',
         ),
+        // Gradient overlay at top
         Positioned(
-          top: 40.0,
-          left: 20.0,
-          child: CircleAvatar(
-            backgroundColor: Colors.black.withOpacity(0.5),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 120,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
         ),
+        // Back button
+        Positioned(
+          top: 50.0,
+          left: 20.0,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.arrow_back_ios,
+                      color: Color(0xFF1F2937),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
       ],
     );
   }
 
-  Widget _buildSlidingPanelContent() {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(12.0),
+  Widget _buildDetailsSection() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(0),
+          topRight: Radius.circular(0),
+        ),
+      ),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            
+            // Duration info
+            _buildDurationInfo(),
+            
+            // Divider
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Colors.grey.shade200,
+                    Colors.transparent,
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            ),
+            
+            // Description
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.keyboard_arrow_up, size: 20, color: Colors.grey),
-                  SizedBox(width: 4),
-                  Text("More Details", style: TextStyle(color: Colors.grey)),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.description_outlined,
+                          color: Color(0xFF6366F1),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "Description",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.route.descriptionEn,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.6,
+                      color: Colors.grey.shade700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Text(
-                    widget.route.titleEn,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildDurationInfo(),
-                const Divider(height: 32, indent: 20, endIndent: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Text(
-                    widget.route.descriptionEn,
-                    style: TextStyle(fontSize: 16, height: 1.5, color: Colors.grey.shade700),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Text(
-                    "Stops on this Route",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                _buildStopsList(),
-              ],
             ),
-          ),
+            const SizedBox(height: 32),
+            
+            // Stops section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.location_on_outlined,
+                      color: Color(0xFF6366F1),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    "Route Stops",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Stops list
+            _buildStopsList(),
+            const SizedBox(height: 24),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildDurationInfo() {
     final List<Widget> durationChips = [];
+    
     if (widget.route.durationWalkingMins != null && widget.route.travelWalkingMins != null) {
       durationChips.add(_buildDurationBreakdownChip(
         icon: Icons.directions_walk,
         totalDuration: widget.route.durationWalkingMins!,
         travelDuration: widget.route.travelWalkingMins!,
+        color: const Color(0xFF10B981),
+        label: 'Walking',
       ));
     }
     if (widget.route.durationTransitMins != null && widget.route.travelTransitMins != null) {
@@ -297,6 +413,8 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
         icon: Icons.directions_bus,
         totalDuration: widget.route.durationTransitMins!,
         travelDuration: widget.route.travelTransitMins!,
+        color: const Color(0xFF3B82F6),
+        label: 'Transit',
       ));
     }
     if (widget.route.durationDrivingMins != null && widget.route.travelDrivingMins != null) {
@@ -304,48 +422,122 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
         icon: Icons.directions_car,
         totalDuration: widget.route.durationDrivingMins!,
         travelDuration: widget.route.travelDrivingMins!,
+        color: const Color(0xFFEF4444),
+        label: 'Driving',
       ));
     }
 
     if (durationChips.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Wrap(
-        spacing: 12.0,
-        runSpacing: 12.0,
-        alignment: WrapAlignment.start,
-        children: durationChips,
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.schedule_outlined,
+                  color: Color(0xFF6366F1),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                "Duration Options",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: durationChips,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDurationBreakdownChip({ required IconData icon, required int totalDuration, required int travelDuration }) {
+  Widget _buildDurationBreakdownChip({
+    required IconData icon,
+    required int totalDuration,
+    required int travelDuration,
+    required Color color,
+    required String label,
+  }) {
     final experienceDuration = totalDuration - travelDuration;
-    return Chip(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      backgroundColor: Colors.purple.shade50,
-      side: BorderSide(color: Colors.purple.shade100),
-      label: Column(
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 20, color: Colors.purple.shade800),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, size: 14, color: Colors.white),
+              ),
               const SizedBox(width: 8),
-              Text(
-                'Total: $totalDuration min',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.purple.shade900),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      color: color,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  Text(
+                    '$totalDuration min',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 4.0),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(6),
+            ),
             child: Text(
-              '(Travel: $travelDuration min + Experience: $experienceDuration min)',
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+              'Travel: $travelDuration • Experience: $experienceDuration',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -357,27 +549,147 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
     return FutureBuilder<List<RouteStop>>(
       future: _stopsFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()));
-        if (snapshot.hasError) return Center(child: Text("Error loading stops: ${snapshot.error}"));
-        if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: Text('No stops found.')));
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+              ),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Error loading stops",
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Container(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                children: [
+                  Icon(Icons.location_off, size: 48, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No stops found',
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         
         final stops = snapshot.data!;
         
-        return ListView.builder(
+        return ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: stops.length,
+          separatorBuilder: (context, index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            height: 1,
+            color: Colors.grey.shade100,
+          ),
           itemBuilder: (context, index) {
             final stop = stops[index];
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-              leading: CircleAvatar(
-                backgroundColor: Colors.purple.shade400,
-                child: Text(stop.stopNumber.toString(), style: const TextStyle(color: Colors.white)),
+            final isLast = index == stops.length - 1;
+            
+            return Container(
+              margin: EdgeInsets.only(bottom: isLast ? 24 : 0),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _goToStop(stop),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6366F1).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              stop.stopNumber.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                stop.venueName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                stop.stopNotesEn,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              title: Text(stop.venueName, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(stop.stopNotesEn),
-              onTap: () => _goToStop(stop),
             );
           },
         );
@@ -394,24 +706,46 @@ class MarkerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = Colors.purple.shade700;
+    final Paint shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.2)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    
+    final RRect shadowRect = RRect.fromLTRBR(2, 2, size.width + 2, size.height - 18, const Radius.circular(22));
+    canvas.drawRRect(shadowRect, shadowPaint);
+
+    final Paint gradientPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height - 20));
+    
     final RRect rrect = RRect.fromLTRBR(0, 0, size.width, size.height - 20, const Radius.circular(20));
-    canvas.drawRRect(rrect, paint);
+    canvas.drawRRect(rrect, gradientPaint);
 
     final Path path = Path();
     path.moveTo(size.width / 2 - 15, size.height - 20);
     path.lineTo(size.width / 2, size.height);
     path.lineTo(size.width / 2 + 15, size.height - 20);
     path.close();
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, gradientPaint);
 
+    final Paint circleShadow = Paint()
+      ..color = Colors.black.withOpacity(0.1)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawCircle(const Offset(42, 42), 27, circleShadow);
+    
     final Paint circlePaint = Paint()..color = Colors.white;
     canvas.drawCircle(const Offset(40, 40), 25, circlePaint);
     
     final TextPainter numberPainter = TextPainter(
       text: TextSpan(
         text: stopNumber,
-        style: TextStyle(fontSize: 28, color: Colors.purple.shade700, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          fontSize: 24,
+          color: Color(0xFF6366F1),
+          fontWeight: FontWeight.bold,
+        ),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -421,14 +755,19 @@ class MarkerPainter extends CustomPainter {
     final TextPainter namePainter = TextPainter(
       text: TextSpan(
         text: venueName,
-        style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          fontSize: 18,
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 2,
       ellipsis: '...',
     );
     namePainter.layout(maxWidth: size.width - 90);
-    namePainter.paint(canvas, const Offset(80, 20));
+    namePainter.paint(canvas, const Offset(80, 25));
   }
 
   @override
