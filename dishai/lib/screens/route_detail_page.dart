@@ -1,9 +1,9 @@
 // lib/screens/route_detail_page.dart
 
 import 'dart:async';
-
-
+import 'dart:ui' as ui; // Widget'ı resme çevirmek için gerekli
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Widget'ı resme çevirmek için gerekli
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
@@ -33,8 +33,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
   void initState() {
     super.initState();
     _stopsFuture = _loadStops();
-    
-    // Animatik ipucunu, sayfa yüklendikten kısa bir süre sonra başlat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showPanelHint();
     });
@@ -58,9 +56,9 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
   Future<List<RouteStop>> _loadStops() async {
     final stops = await DatabaseHelper.instance.getStopsForRoute(widget.route.id);
     if (stops.isNotEmpty) {
+      await _setupMarkers(stops);
       if (mounted) {
         setState(() {
-          _setupMarkers(stops);
           _createPolyline(stops);
           _fitBounds(stops);
         });
@@ -69,27 +67,47 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
     return stops;
   }
 
-  void _setupMarkers(List<RouteStop> stops) {
-    final markers = <Marker>{};
+  Future<BitmapDescriptor> _createMarkerBitmap(String stopNumber, String venueName) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final Size size = const Size(250, 120);
+
+    final MarkerPainter painter = MarkerPainter(stopNumber, venueName);
+    painter.paint(canvas, size);
+
+    final ui.Image markerImage = await pictureRecorder.endRecording().toImage(size.width.toInt(), size.height.toInt());
+    final ByteData? byteData = await markerImage.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List uint8List = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.fromBytes(uint8List);
+  }
+
+  Future<void> _setupMarkers(List<RouteStop> stops) async {
+    final Set<Marker> markers = {};
     for (var stop in stops) {
+      final BitmapDescriptor customIcon = await _createMarkerBitmap(
+        stop.stopNumber.toString(),
+        stop.venueName,
+      );
+
       markers.add(
         Marker(
           markerId: MarkerId('stop_${stop.id}'),
           position: LatLng(stop.latitude, stop.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-          infoWindow: InfoWindow(
-            title: stop.venueName,
-            snippet: 'Stop ${stop.stopNumber}',
-          ),
+          icon: customIcon,
+          anchor: const Offset(0.5, 0.8),
           onTap: () {
-            if (_panelController.isPanelClosed) {
-              _panelController.open();
-            }
+            _goToStop(stop);
           },
         ),
       );
     }
-    _markers.addAll(markers);
+
+    if (mounted) {
+      setState(() {
+        _markers.addAll(markers);
+      });
+    }
   }
 
   void _createPolyline(List<RouteStop> stops) {
@@ -366,4 +384,53 @@ class _RouteDetailPageState extends State<RouteDetailPage> {
       },
     );
   }
+}
+
+class MarkerPainter extends CustomPainter {
+  final String stopNumber;
+  final String venueName;
+
+  MarkerPainter(this.stopNumber, this.venueName);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = Colors.purple.shade700;
+    final RRect rrect = RRect.fromLTRBR(0, 0, size.width, size.height - 20, const Radius.circular(20));
+    canvas.drawRRect(rrect, paint);
+
+    final Path path = Path();
+    path.moveTo(size.width / 2 - 15, size.height - 20);
+    path.lineTo(size.width / 2, size.height);
+    path.lineTo(size.width / 2 + 15, size.height - 20);
+    path.close();
+    canvas.drawPath(path, paint);
+
+    final Paint circlePaint = Paint()..color = Colors.white;
+    canvas.drawCircle(const Offset(40, 40), 25, circlePaint);
+    
+    final TextPainter numberPainter = TextPainter(
+      text: TextSpan(
+        text: stopNumber,
+        style: TextStyle(fontSize: 28, color: Colors.purple.shade700, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    numberPainter.layout();
+    numberPainter.paint(canvas, Offset(40 - numberPainter.width / 2, 40 - numberPainter.height / 2));
+
+    final TextPainter namePainter = TextPainter(
+      text: TextSpan(
+        text: venueName,
+        style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.w600),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 2,
+      ellipsis: '...',
+    );
+    namePainter.layout(maxWidth: size.width - 90);
+    namePainter.paint(canvas, const Offset(80, 20));
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
