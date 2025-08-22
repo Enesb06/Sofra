@@ -396,34 +396,35 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     );
   }
 
+
+
   Widget _buildDurationInfo() {
     final List<Widget> durationChips = [];
     
-    if (widget.route.durationWalkingMins != null && widget.route.travelWalkingMins != null) {
-      durationChips.add(_buildDurationBreakdownChip(
+    // SADECE 'travel' verisi varsa, onu kullanarak çip oluşturuyoruz.
+    if (widget.route.travelWalkingMins != null) {
+      durationChips.add(_buildSimpleDurationChip(
         icon: Icons.directions_walk,
-        totalDuration: widget.route.durationWalkingMins!,
-        travelDuration: widget.route.travelWalkingMins!,
+        label: "Walking",
+        duration: widget.route.travelWalkingMins!,
         color: const Color(0xFF10B981),
-        label: 'Walking',
       ));
     }
-    if (widget.route.durationTransitMins != null && widget.route.travelTransitMins != null) {
-      durationChips.add(_buildDurationBreakdownChip(
-        icon: Icons.directions_bus,
-        totalDuration: widget.route.durationTransitMins!,
-        travelDuration: widget.route.travelTransitMins!,
-        color: const Color(0xFF3B82F6),
-        label: 'Transit',
-      ));
-    }
-    if (widget.route.durationDrivingMins != null && widget.route.travelDrivingMins != null) {
-      durationChips.add(_buildDurationBreakdownChip(
+    if (widget.route.travelDrivingMins != null) {
+      durationChips.add(_buildSimpleDurationChip(
         icon: Icons.directions_car,
-        totalDuration: widget.route.durationDrivingMins!,
-        travelDuration: widget.route.travelDrivingMins!,
+        label: "Driving",
+        duration: widget.route.travelDrivingMins!,
         color: const Color(0xFFEF4444),
-        label: 'Driving',
+      ));
+    }
+    // Gelecekte transit eklenirse diye burası da hazır.
+    if (widget.route.travelTransitMins != null) {
+      durationChips.add(_buildSimpleDurationChip(
+        icon: Icons.directions_bus,
+        label: "Transit",
+        duration: widget.route.travelTransitMins!,
+        color: const Color(0xFF3B82F6),
       ));
     }
 
@@ -443,14 +444,14 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.schedule_outlined,
+                  Icons.alt_route_outlined, // İkonu 'yol' ile değiştirdik
                   color: Color(0xFF6366F1),
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               const Text(
-                "Duration Options",
+                "Travel Times", // Başlığı güncelledik
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -460,24 +461,38 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
             ],
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            children: durationChips,
+          // LayoutBuilder hala hizalama ve eşit genişlik için görev başında.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double totalWidth = constraints.maxWidth;
+              const double spacing = 8.0;
+              final int chipCount = durationChips.length > 0 ? durationChips.length : 1;
+              final double chipWidth = (totalWidth - (spacing * (chipCount - 1))) / chipCount;
+              
+              return Wrap(
+                spacing: spacing,
+                runSpacing: 8.0,
+                children: durationChips.map((chip) {
+                  return SizedBox(
+                    width: chipWidth,
+                    child: chip,
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDurationBreakdownChip({
+  // YENİ VE SADELEŞTİRİLMİŞ ÇİP WIDGET'I
+  Widget _buildSimpleDurationChip({
     required IconData icon,
-    required int totalDuration,
-    required int travelDuration,
-    required Color color,
     required String label,
+    required int duration,
+    required Color color,
   }) {
-    final experienceDuration = totalDuration - travelDuration;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -485,65 +500,48 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center, // İçeriği ortala
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, size: 14, color: Colors.white),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 10,
-                      color: color,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  Text(
-                    '$totalDuration min',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+          // Renkli kutu içindeki ikon
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
+              color: color,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              'Travel: $travelDuration • Experience: $experienceDuration',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+            child: Icon(icon, size: 14, color: Colors.white),
+          ),
+          const SizedBox(width: 8),
+          // Dikey Metin Grubu (Label ve Süre)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  color: color,
+                  letterSpacing: 0.3,
+                ),
               ),
-            ),
+              Text(
+                '$duration min',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+  
+// ... (dosyanın geri kalan tüm metotları aynı kalacak)
   
   Widget _buildStopsList() {
     return FutureBuilder<List<RouteStop>>(

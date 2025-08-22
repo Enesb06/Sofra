@@ -268,6 +268,7 @@ class _RouteCard extends StatelessWidget {
     IconData durationIcon = Icons.timer_outlined;
     String durationLabel = '-- min';
 
+     // Sade bir gösterim için, 'duration' (toplam) sürelerine bakıyoruz.
     if (route.durationWalkingMins != null) {
       durationIcon = Icons.directions_walk;
       durationLabel = '${route.durationWalkingMins} min';
