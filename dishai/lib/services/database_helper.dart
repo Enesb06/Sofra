@@ -520,5 +520,51 @@ class DatabaseHelper {
       );
     });
   }
+   /// Ana sayfada göstermek için rastgele bir yemek detayı getirir.
+  Future<FoodDetails?> getFeaturedFood() async {
+    final db = await instance.database;
+    // Veritabanından rastgele bir satır seçmek için en verimli yol.
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableFoods,
+      orderBy: 'RANDOM()',
+      limit: 1,
+    );
+    if (maps.isNotEmpty) {
+      // getFoodByName'i tekrar kullanarak kodu tekrar etmiyoruz.
+      return await getFoodByName(maps.first[columnName] as String);
+    }
+    return null;
+  }
+
+  /// Kullanıcının eklediği son anıyı getirir.
+  Future<TastedFood?> getLatestTastedFood() async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableUserTastedFoods,
+      orderBy: '$columnTastedDate DESC', // Tarihe göre tersten sırala
+      limit: 1, // Sadece en yenisini al
+    );
+    if (maps.isNotEmpty) {
+      return TastedFood.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  /// Kullanıcının lezzet pasaportu istatistiklerini hesaplar.
+  Future<Map<String, int>> getTastedFoodStats() async {
+    final db = await instance.database;
+    // Toplam tadılan yemek sayısı
+    final totalCountResult = await db.rawQuery('SELECT COUNT(*) FROM $tableUserTastedFoods');
+    final totalCount = Sqflite.firstIntValue(totalCountResult) ?? 0;
+
+    // Tadılan benzersiz şehir sayısı
+    final cityCountResult = await db.rawQuery('SELECT COUNT(DISTINCT $columnTastedCity) FROM $tableUserTastedFoods');
+    final cityCount = Sqflite.firstIntValue(cityCountResult) ?? 0;
+
+    return {
+      'totalDishes': totalCount,
+      'citiesVisited': cityCount,
+    };
+  }
 }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class PlaceSearchResult {
   final String placeId;
@@ -34,11 +35,10 @@ class PlaceSearchResult {
 }
 
 class PlacesService {
-  final String apiKey;
+ final String apiKey = dotenv.env['GOOGLE_API_KEY']!;
   final String _baseUrl = "https://maps.googleapis.com/maps/api/place";
 
-  PlacesService({required this.apiKey});
-
+   PlacesService();
   Future<Position> getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;

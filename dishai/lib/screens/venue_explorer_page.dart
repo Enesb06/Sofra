@@ -10,8 +10,8 @@ import '../services/database_helper.dart';
 import '../services/places_service.dart';
 
 // -----------------------------------------------------------------------------
-// ÖNEMLİ: Google Cloud Platform'dan aldığın API anahtarını buraya yapıştır.
-const String GOOGLE_API_KEY = "AIzaSyAELUVYZwhbFA5XCmmo_K59v44R36_do8U";
+
+
 // -----------------------------------------------------------------------------
 
 class VenueExplorerPage extends StatefulWidget {
@@ -35,7 +35,7 @@ class _VenueExplorerPageState extends State<VenueExplorerPage> {
   late Future<List<FoodDetails>> _foodsFuture;
   FoodDetails? _selectedFood;
   
-  final PlacesService _placesService = PlacesService(apiKey: GOOGLE_API_KEY);
+  final PlacesService _placesService = PlacesService();
   List<PlaceSearchResult>? _venues;
   bool _isLoadingVenues = false;
   String? _errorMessage;
