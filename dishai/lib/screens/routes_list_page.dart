@@ -1,4 +1,4 @@
-// lib/screens/routes_list_page.dart
+// GÜNCELLENMİŞ VE SADELEŞTİRİLMİŞ DOSYA: lib/screens/routes_list_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,7 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../services/database_helper.dart';
 import '../models/city_model.dart';
 import '../models/route_model.dart';
-import '../services/sync_service.dart'; // <-- Senkronizasyon servisini import ediyoruz
+// import '../services/sync_service.dart'; // <-- ARTIK GEREKLİ DEĞİL
 import 'route_detail_page.dart';
 
 class RoutesListPage extends StatefulWidget {
@@ -17,7 +17,7 @@ class RoutesListPage extends StatefulWidget {
 }
 
 class _RoutesListPageState extends State<RoutesListPage> {
-  bool _isLoading = true; // Bu sayfanın kendi içindeki veri yükleme durumu
+  bool _isLoading = true;
   List<City> _citiesWithRoutes = [];
   List<RouteModel> _allRoutes = [];
   List<RouteModel> _filteredRoutes = [];
@@ -26,30 +26,20 @@ class _RoutesListPageState extends State<RoutesListPage> {
   @override
   void initState() {
     super.initState();
-    // Global senkronizasyon durumunu dinlemeye başla
-    SyncService.isSyncCompleted.addListener(_onSyncCompleted);
-    // Eğer bu sayfa açıldığında senkronizasyon zaten bitmişse, verileri direkt yükle
-    if (SyncService.isSyncCompleted.value) {
-      _loadData();
-    }
+    // Bu sayfa açıldığında senkronizasyonun zaten bitmiş olduğunu varsayıyoruz.
+    // Bu yüzden direkt verileri yüklüyoruz.
+    _loadData();
   }
 
-  // Senkronizasyon tamamlandığında tetiklenecek olan metot
-  void _onSyncCompleted() {
-    // Eğer senkronizasyon yeni bittiyse ve bu sayfa hala ekrandaysa...
-    if (SyncService.isSyncCompleted.value && mounted) {
-      _loadData(); // Verileri yerel veritabanından çek
-    }
-  }
-
+  // SyncService ile ilgili tüm dinleyiciler kaldırıldı.
   @override
   void dispose() {
-    // Sayfa kapandığında dinleyiciyi kaldırarak hafıza sızıntılarını önle
-    SyncService.isSyncCompleted.removeListener(_onSyncCompleted);
     super.dispose();
   }
 
   Future<void> _loadData() async {
+    // isLoading'i burada ayarlamaya gerek yok, FutureBuilder halledecek.
+    // Ancak mevcut yapıyı koruyalım, sorun yaratmaz.
     if (mounted) setState(() { _isLoading = true; });
 
     final allCities = await DatabaseHelper.instance.getAllCities();
@@ -69,7 +59,7 @@ class _RoutesListPageState extends State<RoutesListPage> {
     if (mounted) {
       setState(() {
         _allRoutes = allRoutes;
-        _filteredRoutes = allRoutes; // Başlangıçta tüm rotaları göster
+        _filteredRoutes = allRoutes;
         _citiesWithRoutes = citiesWithRoutes;
         _isLoading = false;
       });
@@ -94,54 +84,29 @@ class _RoutesListPageState extends State<RoutesListPage> {
         title: const Text('Gourmet Routes'),
         backgroundColor: Colors.purple.shade300,
       ),
-      body: ValueListenableBuilder<bool>(
-        valueListenable: SyncService.isSyncCompleted,
-        builder: (context, isSyncDone, child) {
-          // 1. KONTROL: Global senkronizasyon bitti mi?
-          if (!isSyncDone) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    "Preparing gourmet routes...",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // 2. KONTROL: Senkronizasyon bitti, şimdi yerel veriyi yüklüyoruz.
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          // 3. KONTROL: Yükleme bitti ama hiç rota bulunamadı mı?
-          if (_allRoutes.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text(
-                  "No gourmet routes have been added yet.\nCheck back later!",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-            );
-          }
-          
-          // Her şey yolundaysa, asıl içeriği göster
-          return _buildContent();
-        },
-      ),
+      body: _buildPageContent(), // build metodu basitleştirildi
     );
   }
 
-  // Arayüzün ana içeriğini oluşturan yardımcı metot
-  Widget _buildContent() {
+  // ValueListenableBuilder kaldırıldı, içerik doğrudan gösteriliyor.
+  Widget _buildPageContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_allRoutes.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            "No gourmet routes have been added yet.\nCheck back later!",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+    
     return Column(
       children: [
         _buildCityFilters(),
@@ -195,6 +160,7 @@ class _RoutesListPageState extends State<RoutesListPage> {
   }
 }
 
+// _RouteCard widget'ında hiçbir değişiklik yok, olduğu gibi kalabilir.
 class _RouteCard extends StatelessWidget {
   final RouteModel route;
   const _RouteCard({required this.route});
@@ -268,7 +234,6 @@ class _RouteCard extends StatelessWidget {
     IconData durationIcon = Icons.timer_outlined;
     String durationLabel = '-- min';
 
-     // Sade bir gösterim için, 'duration' (toplam) sürelerine bakıyoruz.
     if (route.durationWalkingMins != null) {
       durationIcon = Icons.directions_walk;
       durationLabel = '${route.durationWalkingMins} min';
