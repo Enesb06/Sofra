@@ -1,11 +1,12 @@
 // GÜNCELLENMİŞ DOSYA: lib/screens/splash_screen.dart
 
 import 'dart:async';
+import 'package:dishai/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // 1. DEĞİŞİKLİK: HomePage yerine yeni SyncPage'i import ediyoruz.
-import 'sync_page.dart'; 
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
       const Duration(seconds: 3),
       () => Navigator.of(context).pushReplacement(
         // 2. DEĞİŞİKLİK: Uygulamayı artık SyncPage'e yönlendiriyoruz.
-        MaterialPageRoute(builder: (context) => const SyncPage()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       ),
     );
   }

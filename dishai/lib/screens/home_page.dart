@@ -1,10 +1,11 @@
-// lib/screens/home_page.dart
+// GÜNCELLENMİŞ DOSYA: lib/screens/home_page.dart (Düz Navigator Bar - Home Ortada)
 
 import 'package:flutter/material.dart';
+import 'dashboard_page.dart';
 import 'recognition_page.dart';
 import 'discover_page.dart';
 import 'menu_scanner_page.dart';
-import 'routes_list_page.dart'; // <-- YENİ İMPORT: Rota listesi sayfamız
+import 'routes_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,15 +15,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
+  // Başlangıçta ortadaki Home butonu (index 2) seçili olacak.
+  int _selectedIndex = 2; 
+  late final List<Widget> _widgetOptions;
 
-  // Navigasyon çubuğunun yöneteceği sayfaların listesi.
-  static const List<Widget> _widgetOptions = <Widget>[
-    RecognitionPage(),
-    DiscoverPage(),
-    RoutesListPage(),   // <-- YENİ SAYFAYI EKLE (3. sıraya)
-    MenuScannerPage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    
+    // YENİ SAYFA SIRALAMASI
+    // Home (Dashboard) ortada (index 2) olacak şekilde düzenliyoruz.
+    _widgetOptions = <Widget>[
+      const RecognitionPage(),
+      const DiscoverPage(),
+      DashboardPage(onNavigateToTab: _onItemTapped), // Home (Dashboard) - index 2
+      const RoutesListPage(),
+      const MenuScannerPage(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -37,7 +47,9 @@ class _HomePageState extends State<HomePage> {
         index: _selectedIndex,
         children: _widgetOptions,
       ),
+      // Klasik ve düz BottomNavigationBar'a geri dönüyoruz.
       bottomNavigationBar: BottomNavigationBar(
+        // YENİ SEKME SIRALAMASI
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt_outlined),
@@ -49,13 +61,17 @@ class _HomePageState extends State<HomePage> {
             activeIcon: Icon(Icons.explore),
             label: 'Discover',
           ),
-          // --- YENİ SEKMEYİ EKLE ---
+          // Home sekmesi tam ortada
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.route_outlined),
             activeIcon: Icon(Icons.route),
             label: 'Routes',
           ),
-          // ---
           BottomNavigationBarItem(
             icon: Icon(Icons.menu_book_outlined),
             activeIcon: Icon(Icons.menu_book),
@@ -63,10 +79,11 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepOrange,
+        selectedItemColor: Colors.indigo, // Renkleri güncelledik
         unselectedItemColor: Colors.grey.shade600,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
+        // Bu, etiketlerin her zaman görünmesini ve ikonların kaymamasını sağlar.
+        type: BottomNavigationBarType.fixed, 
       ),
     );
   }
