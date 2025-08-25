@@ -9,7 +9,7 @@ Bu rehber, **Sofra** uygulamasının yeni Ana Sayfa (Dashboard) tasarımıyla bi
 Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdaki noktaları göz önünde bulundurmanızı rica ederiz:
 
 *   **İçerik: **10 şehir** ve bu şehirlere ait yüzlerce yemek bulunmaktadır.
-*   **Gurme Rotaları:** Bu özellik şu anda sadece **Ankara** şehri için hazırlanmış 3 farklı rota içermektedir.
+*   **Gurme Rotaları:** Bu özellik şu anda sadece **Ankara** şehri için hazırlanmış rotalar içermektedir.
 
 ### **1. Kurulum ve İlk Açılış**
 
