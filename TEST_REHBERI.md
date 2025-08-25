@@ -13,9 +13,21 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 
 ### **1. Kurulum ve İlk Açılış**
 
-1.  GitHub deposunun **"Releases"** bölümünden `Sofra-v1.0.apk` dosyasını Android cihazınıza indirin ve kurun.
-2.  Uygulama ilk açılışta, yeni Ana Sayfa'da bir **yükleme iskeleti (skeleton)** göreceksiniz. Bu sırada uygulama, Supabase'den güncel gastronomi verilerini (yemekler, şehirler, rotalar vb.) senkronize etmektedir.
-3.  Senkronizasyon tamamlandığında, Ana Sayfa içeriği otomatik olarak dolacaktır. İnternet bağlantısı yoksa, bir hata ekranı ile karşılaşılacaktır.
+Uygulamayı test etmek için lütfen aşağıdaki adımları izleyin.
+
+**1. APK Dosyasını İndirme:**
+   *   Bu projenin GitHub sayfasında, sağ tarafta bulunan **"Releases"** bölümüne tıklayın.
+   *   Açılan sayfada **"Sofra v1.0 - Yarışma Sunumu"** başlıklı sürümü göreceksiniz.
+   *   Başlığın altındaki **"Assets"** bölümünde bulunan `Sofra-v1.0.apk` dosyasına tıklayarak Android cihazınıza indirin.
+
+**2. Uygulamayı Yükleme (Kurulum):**
+   *   İndirme tamamlandıktan sonra, telefonunuzun bildirim panelinden veya "Dosyalarım" uygulamasından indirilen `Sofra-v1.0.apk` dosyasına dokunun.
+   *   Android, güvenlik nedeniyle "bilinmeyen kaynaklardan uygulama yüklemeye" karşı sizi uyarabilir. Lütfen bu uyarıya **izin verin** veya **"Ayarlar"**a giderek yüklemeyi etkinleştirin.
+   *   "Yükle" butonuna basarak kurulumu tamamlayın.
+
+**3. İlk Açılış ve Senkronizasyon:**
+   *   Uygulamayı açın. Yeni Ana Sayfa'da bir **yükleme iskeleti (skeleton)** göreceksiniz.
+   *   Bu sırada uygulama, güncel gastronomi verilerini (yemekler, şehirler, rotalar vb.) senkronize etmektedir. Bu işlem internet hızınıza bağlı olarak birkaç saniye sürebilir. Senkronizasyon tamamlandığında, Ana Sayfa içeriği otomatik olarak dolacaktır.
 
 ### **2. Uygulamanın Özellikleri ve Kullanım Adımları**
 
