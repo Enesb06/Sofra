@@ -12,7 +12,7 @@ Bu proje, **Fikrim Gelecek: Gençler Arası Dijital Çözümler Yarışması** i
 | Materyal | Açıklama | ➡️ Erişim Linki |
 | :--- | :--- | :--- |
 | 📱 **Çalışan Uygulama (APK)** | Uygulamanın test edilebilir Android kurulum dosyası. | **[GitHub Releases Sayfasına Git](https://github.com/enesb06/sofra/releases)** |
-| 📋 **Test Kullanıcı Rehberi** | Uygulamanın nasıl kullanılacağını ve test edileceğini anlatan rehber. | **[Test Rehberini Oku (PDF)](TEST_REHBERI.pdf)** |
+| 📋 **Test Kullanıcı Rehberi** | Uygulamanın nasıl kullanılacağını ve test edileceğini anlatan rehber. | **[Test Rehberini Oku ](TEST_REHBERI.md)** |
 | 📂 **Kaynak Kodları** | Merak edenler için projenin tüm Flutter kaynak kodları. | (Bu deponun kendisi) |
 
 ---
