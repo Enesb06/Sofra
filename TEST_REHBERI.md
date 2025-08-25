@@ -70,7 +70,7 @@ Bu modül, menüleri anlamanızı sağlayan kişisel çevirmeninizdir.
 
 *   **Nasıl Kullanılır:**
     1.  Alt çubuktan **"Scan Menu"** sekmesine dokunun.
-    2.  Kamerayı, metinleri net görünecek şekilde bir menüye odaklayın. (Test için bilgisayar ekranınızda şu linki açabilirsiniz: `https://i.ibb.co/680320f/istanbul-esnaf.jpg`)
+    2.  Kamerayı, metinleri net görünecek şekilde bir menüye odaklayın.
     3.  **"Scan Menu"** butonuna basın ve uygulamanın tanıdığı yemekleri listelemesini izleyin.
 
 #### **🧭 Özellik 5: Kürate Edilmiş Gurme Rotaları (Routes Sekmesi)**
