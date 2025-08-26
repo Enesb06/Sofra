@@ -577,5 +577,32 @@ class DatabaseHelper {
       'citiesVisited': cityCount,
     };
   }
+  /// [YENİ - LEZZET GÖREVİ İÇİN]
+  /// Kullanıcının tattığı tüm yemeklerin kategorilerini bir liste olarak döndürür.
+  /// Bu, görev ilerlemesini hesaplamak için kullanılır.
+  /// Örnek Çıktı: ['kebab', 'kebab', 'soup', 'dessert']
+  Future<List<String>> getTastedFoodCategories() async {
+    final db = await instance.database;
+
+    // İki tabloyu birleştiriyoruz:
+    // 1. user_tasted_foods (T1): Kullanıcının yediği yemeklerin listesi.
+    // 2. foods (T2): Tüm yemeklerin detayları ve kategorileri.
+    // 'T1.food_name' ile 'T2.name' üzerinden eşleştirme yapıyoruz.
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT T2.$columnFoodCategory
+      FROM $tableUserTastedFoods AS T1
+      INNER JOIN $tableFoods AS T2 ON T1.$columnTastedFoodName = T2.$columnName
+      WHERE T2.$columnFoodCategory IS NOT NULL AND T2.$columnFoodCategory != ''
+    ''');
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    // Gelen sorgu sonucundaki her satırdan sadece kategori bilgisini alıp
+    // bir liste haline getiriyoruz.
+    return List.generate(maps.length, (i) => maps[i][columnFoodCategory] as String);
+  }
 }
+
 
