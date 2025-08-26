@@ -1,5 +1,3 @@
-// GÜNCELLENMİŞ VE TEMİZLENMİŞ DOSYA: lib/screens/recognition_page.dart
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -45,16 +43,22 @@ class _RecognitionPageState extends State<RecognitionPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isBotTyping = false;
   
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // --- DEĞİŞİKLİK 1: AudioPlayer'ı burada oluşturmuyoruz.
+  late AudioPlayer _audioPlayer;
   bool _isAudioPlaying = false;
   String _currentlyPlayingFood = '';
 
   @override
   void initState() {
     super.initState();
-    // Artık sadece kendi modelini yüklüyor.
+    // --- DEĞİŞİKLİK 2: AudioPlayer'ı burada, state ilk kez oluşturulurken yaratıyoruz.
+    _createNewAudioPlayer();
     _loadModel();
-    
+  }
+  
+  // YENİ METOT: AudioPlayer'ı oluşturur ve ayarlarını yapar.
+  void _createNewAudioPlayer() {
+    _audioPlayer = AudioPlayer();
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
         setState(() { _isAudioPlaying = state == PlayerState.playing; });
@@ -66,11 +70,10 @@ class _RecognitionPageState extends State<RecognitionPage> {
   void dispose() {
     _interpreter?.close();
     _scrollController.dispose();
-    _audioPlayer.dispose();
+    _audioPlayer.dispose(); // Sayfa yok edilirken player'ı da yok et.
     super.dispose();
   }
   
-  // Sadece modeli yükleyen basitleştirilmiş fonksiyon.
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('assets/model.tflite');
@@ -82,11 +85,40 @@ class _RecognitionPageState extends State<RecognitionPage> {
     }
   }
 
-  // --- GERİ KALAN TÜM FONKSİYONLAR AYNEN KALIYOR ---
-  // (_fetchFoodDetails, _resetState, _pickImage, _runInference, _startChatbotFlow,
-  // _showMainOptions, _handleOptionSelection, _askForMoreInfo, _addBotMessage,
-  // _showStory, _showIngredients, _showPairing, _navigateToWaiterCard,
-  // _showPronunciation, _scrollToBottom, _generateSpiceLevelText, _generateAllergenText)
+  // --- DEĞİŞİKLİK 3: _resetState metodunun son ve en güvenli hali ---
+  Future<void> _resetState() async {
+    // 1. Önce, mevcut AudioPlayer'ı tamamen yok et.
+    //    Bu asenkron bir işlem olabilir, bu yüzden beklemek en güvenlisidir.
+    await _audioPlayer.dispose();
+
+    // 2. Sıfırdan, temiz bir AudioPlayer ve dinleyicisi oluştur.
+    _createNewAudioPlayer();
+
+    // 3. Her şey temizlendikten sonra Flutter state'ini güncelle.
+    if (mounted) {
+      setState(() {
+        _image = null;
+        _loading = false;
+        _isChatActive = false;
+        _chatMessages.clear();
+        _currentFood = null;
+        _isBotTyping = false;
+        _isAudioPlaying = false;
+        _currentlyPlayingFood = '';
+      });
+    }
+  }
+  
+  Future<void> _pickImage() async {
+    await _resetState(); // Önceki oturumdan kalan her şeyi güvenle temizle.
+    
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (pickedFile != null) {
+      if (!mounted) return;
+      setState(() { _image = File(pickedFile.path); _loading = true; });
+      await _runInference(File(pickedFile.path));
+    }
+  }
   
   Future<FoodDetails> _fetchFoodDetails(String foodName) async {
     final food = await DatabaseHelper.instance.getFoodByName(foodName);
@@ -95,19 +127,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
     }
     return food;
   }
-  void _resetState() => setState(() {
-    _image = null; _loading = false; _isChatActive = false;
-    _chatMessages.clear(); _currentFood = null; _isBotTyping = false;
-    _audioPlayer.stop();
-  });
-  Future<void> _pickImage() async {
-    _resetState();
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
-    if (pickedFile != null) {
-      setState(() { _image = File(pickedFile.path); _loading = true; });
-      await _runInference(File(pickedFile.path));
-    }
-  }
+
   Future<void> _runInference(File imageFile) async {
     if (!_modelLoaded || _interpreter == null || _labels == null) return;
     final imageData = await imageFile.readAsBytes();

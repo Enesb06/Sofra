@@ -21,6 +21,9 @@ import '../models/city_food_model.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
 
+
+import '../services/sync_service.dart';
+
 typedef TabNavigationRequest = void Function(int tabIndex, {City? city});
 typedef FoodNavigationRequest = void Function(FoodDetails food);
 
@@ -73,6 +76,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final stopsResponse = await Supabase.instance.client.from('route_stops').select();
       final List<RouteStop> stopList = await compute(parseRouteStops, stopsResponse as List);
       await DatabaseHelper.instance.batchUpsertRouteStops(stopList);
+      syncCompletedNotifier.value = true;
       return true;
     } catch (e) {
       if (kDebugMode) print("❗️❗️❗️ DASHBOARD SYNC HATA: $e");

@@ -1,12 +1,13 @@
-// GÜNCELLENMİŞ VE SADELEŞTİRİLMİŞ DOSYA: lib/screens/routes_list_page.dart
+// GÜNCELLENMİŞ VE DAHA DAYANIKLI DOSYA: lib/screens/routes_list_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../services/database_helper.dart';
 import '../models/city_model.dart';
 import '../models/route_model.dart';
-// import '../services/sync_service.dart'; // <-- ARTIK GEREKLİ DEĞİL
+import '../services/sync_service.dart';
 import 'route_detail_page.dart';
 
 class RoutesListPage extends StatefulWidget {
@@ -17,31 +18,24 @@ class RoutesListPage extends StatefulWidget {
 }
 
 class _RoutesListPageState extends State<RoutesListPage> {
-  bool _isLoading = true;
+  // Verileri FutureBuilder'da tutmak yerine, doğrudan state'te tutacağız.
   List<City> _citiesWithRoutes = [];
   List<RouteModel> _allRoutes = [];
   List<RouteModel> _filteredRoutes = [];
   int? _selectedCityId;
 
+  // Future'ı state'ten kaldırdık.
+  // late Future<Map<String, dynamic>> _dataFuture;
+
   @override
   void initState() {
     super.initState();
-    // Bu sayfa açıldığında senkronizasyonun zaten bitmiş olduğunu varsayıyoruz.
-    // Bu yüzden direkt verileri yüklüyoruz.
-    _loadData();
+    // initState'te artık veri yükleme yok.
   }
 
-  // SyncService ile ilgili tüm dinleyiciler kaldırıldı.
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Future<void> _loadData() async {
-    // isLoading'i burada ayarlamaya gerek yok, FutureBuilder halledecek.
-    // Ancak mevcut yapıyı koruyalım, sorun yaratmaz.
-    if (mounted) setState(() { _isLoading = true; });
-
+  // Veri yükleme metodu aynı kalıyor.
+  Future<Map<String, dynamic>> _loadData() async {
+    print("⏳ ROUTES_LIST_PAGE: Veritabanından veriler çekilmeye başlanıyor...");
     final allCities = await DatabaseHelper.instance.getAllCities();
     final allRoutes = <RouteModel>[];
     final citiesWithRoutesSet = <int>{};
@@ -55,15 +49,13 @@ class _RoutesListPageState extends State<RoutesListPage> {
     }
 
     final citiesWithRoutes = allCities.where((city) => citiesWithRoutesSet.contains(city.id)).toList();
+    
+    print("📦 ROUTES_LIST_PAGE: ${allRoutes.length} rota ve ${citiesWithRoutes.length} şehir bulundu.");
 
-    if (mounted) {
-      setState(() {
-        _allRoutes = allRoutes;
-        _filteredRoutes = allRoutes;
-        _citiesWithRoutes = citiesWithRoutes;
-        _isLoading = false;
-      });
-    }
+    return {
+      'cities': citiesWithRoutes,
+      'routes': allRoutes,
+    };
   }
 
   void _filterRoutes(int? cityId) {
@@ -84,37 +76,69 @@ class _RoutesListPageState extends State<RoutesListPage> {
         title: const Text('Gourmet Routes'),
         backgroundColor: Colors.purple.shade300,
       ),
-      body: _buildPageContent(), // build metodu basitleştirildi
+      body: ValueListenableBuilder<bool>(
+        valueListenable: syncCompletedNotifier,
+        builder: (context, isSyncComplete, child) {
+          print("🚦 ROUTES_LIST_PAGE: Sinyal dinleniyor. Sync durumu: $isSyncComplete");
+          
+          if (!isSyncComplete) {
+            return _buildLoadingSkeleton();
+          }
+
+          // SENKRONİZASYON BİTTİĞİNDE FutureBuilder'ı KULLANARAK VERİYİ BİR KEZ YÜKLE
+          return FutureBuilder<Map<String, dynamic>>(
+            // Future'ı doğrudan burada çağırıyoruz. Bu, her zaman doğru anda çalışmasını sağlar.
+            future: _loadData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildLoadingSkeleton(); // Veri yüklenirken de skeleton göster
+              }
+
+              if (snapshot.hasError) {
+                return const Center(child: Text('An error occurred while loading routes.'));
+              }
+              
+              if (!snapshot.hasData) {
+                return const Center(child: Text('Could not load route data.'));
+              }
+
+              // Veriler başarıyla çekildi. State'i güncelle ve UI'ı çiz.
+              final data = snapshot.data!;
+              _citiesWithRoutes = data['cities'];
+              _allRoutes = data['routes'];
+
+              // Filtre seçilmemişse veya ilk yüklemeyse, tüm rotaları göster
+              if (_filteredRoutes.isEmpty && _allRoutes.isNotEmpty && _selectedCityId == null) {
+                 _filteredRoutes = _allRoutes;
+              }
+
+              if (_allRoutes.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      "No gourmet routes have been added yet.\nCheck back later!",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  _buildCityFilters(),
+                  Expanded(child: _buildRoutesList()),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  // ValueListenableBuilder kaldırıldı, içerik doğrudan gösteriliyor.
-  Widget _buildPageContent() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    
-    if (_allRoutes.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text(
-            "No gourmet routes have been added yet.\nCheck back later!",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-        ),
-      );
-    }
-    
-    return Column(
-      children: [
-        _buildCityFilters(),
-        Expanded(child: _buildRoutesList()),
-      ],
-    );
-  }
-
+  // Bu metot artık parametre almıyor, state'teki değişkeni kullanıyor.
   Widget _buildCityFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -142,6 +166,8 @@ class _RoutesListPageState extends State<RoutesListPage> {
 
   Widget _buildRoutesList() {
     if (_filteredRoutes.isEmpty) {
+      // Bu koşul artık sadece filtreleme sonrası boş sonuçlar için geçerli olacak.
+      // İlk yüklemedeki "rota yok" durumu FutureBuilder içinde ele alınıyor.
       return const Center(
         child: Text(
           'No routes found for the selected city.',
@@ -158,13 +184,52 @@ class _RoutesListPageState extends State<RoutesListPage> {
       },
     );
   }
+
+  Widget _buildLoadingSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: List.generate(3, (index) => _buildSkeletonCard()),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 20.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 200,
+            width: double.infinity,
+            color: Colors.white,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(width: 100, height: 20, color: Colors.white),
+                Container(width: 80, height: 20, color: Colors.white),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// _RouteCard widget'ında hiçbir değişiklik yok, olduğu gibi kalabilir.
+// _RouteCard widget'ında değişiklik yok
 class _RouteCard extends StatelessWidget {
   final RouteModel route;
   const _RouteCard({required this.route});
 
+  // ... (içeriği aynı)
   @override
   Widget build(BuildContext context) {
     return Card(
