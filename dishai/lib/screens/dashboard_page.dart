@@ -26,6 +26,8 @@ import '../services/sync_service.dart';
 // <-- YENİ IMPORTLAR -->
 import '../models/quest_model.dart';
 import '../services/quest_service.dart';
+import 'quests_page.dart';
+
 
 
 typedef TabNavigationRequest = void Function(int tabIndex, {City? city});
@@ -113,28 +115,34 @@ class _DashboardPageState extends State<DashboardPage> {
   }
   
   // <-- YENİ MANTIK İLE GÜNCELLENMİŞ _loadDashboardData METODU -->
+ // lib/screens/dashboard_page.dart -> _DashboardPageState içinde
+
   Future<void> _loadDashboardData() async {
     _featuredDishesFuture = DatabaseHelper.instance.getFeaturedDishesWithCity();
     _latestMemory = await DatabaseHelper.instance.getLatestTastedFood();
     _stats = await DatabaseHelper.instance.getTastedFoodStats();
     
-    // Görev ilerlemesini hesapla
-    final Quest currentQuest = QuestService.getCurrentQuestForUser();
-    final List<String> tastedCategories = await DatabaseHelper.instance.getTastedFoodCategories();
-    int progressCount = 0;
-    for (final rule in currentQuest.rules) {
-      int countForRule = tastedCategories.where((cat) => cat == rule.category).length;
-      progressCount += countForRule.clamp(0, rule.targetCount);
-    }
+    // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+
+    // 1. Veritabanından hem şehir hem kategori bilgilerini içeren listeyi çek.
+    final List<TastedFoodInfo> tastedInfo = await DatabaseHelper.instance.getTastedFoodInfoForQuests();
     
+    // 2. QuestService'e bu listeyi vererek Dashboard'da gösterilecek görevi al.
+    final Quest currentQuest = QuestService.getNextUncompletedQuest(tastedInfo);
+
+    // 3. QuestService'in merkezi hesaplama metodunu kullanarak bu görevin ilerlemesini hesapla.
+    final int progressCount = QuestService.calculateProgressForQuest(currentQuest, tastedInfo);
+    
+    // 4. State'i güncelle.
     _currentQuestProgress = QuestProgress(
       quest: currentQuest,
       currentProgress: progressCount,
     );
+    
+    // --- DEĞİŞİKLİK BİTTİ ---
 
     if(mounted) setState(() {});
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -269,6 +277,7 @@ class _FlavorQuestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // İlerleme yüzdesini hesapla (0.0 ile 1.0 arasında)
     final double percentage = progress.quest.totalTarget == 0
         ? 0
         : progress.currentProgress / progress.quest.totalTarget;
@@ -278,67 +287,92 @@ class _FlavorQuestCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       shadowColor: Colors.purple.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.flag_outlined, color: Colors.purple.shade600),
-                const SizedBox(width: 8),
-                Text(
-                  "Flavor Quest",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              progress.quest.title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              progress.quest.description,
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: percentage,
-                      minHeight: 12,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.purple.shade400),
+      // --- DEĞİŞİKLİK 1: Kartı tıklanabilir yapmak için InkWell ile sarmalıyoruz ---
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12), // Tıklama efektinin kenarları yuvarlak olsun
+        onTap: () {
+          // Tıklandığında QuestsPage'i aç
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const QuestsPage()),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- DEĞİŞİKLİK 2: Kart başlığını "See All" butonu içerecek şekilde güncelliyoruz ---
+              Row(
+                children: [
+                  Icon(Icons.flag_outlined, color: Colors.purple.shade600),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Your Next Quest", // Başlığı daha açıklayıcı yaptık
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '${progress.currentProgress} / ${progress.quest.totalTarget}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  const Spacer(), // Araya boşluk koyarak butonu sağa yaslıyoruz
+                  const Text(
+                    "See All",
+                    style: TextStyle(
+                      color: Colors.purple,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14
+                    ),
                   ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.purple),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // --- DEĞİŞİKLİK YOK: Geri kalan kısım tamamen aynı ---
+              Text(
+                progress.quest.title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                progress.quest.description,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: percentage,
+                        minHeight: 12,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.purple.shade400),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${progress.currentProgress} / ${progress.quest.totalTarget}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -13,6 +13,14 @@ import '../models/food_tip_model.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
 
+
+class TastedFoodInfo {
+  final String cityName;
+  final String? category;
+
+  TastedFoodInfo({required this.cityName, this.category});
+}
+
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // Veritabanı şeması değiştiği için versiyonu artırıyoruz (cities'e yeni sütunlar).
@@ -602,6 +610,30 @@ class DatabaseHelper {
     // Gelen sorgu sonucundaki her satırdan sadece kategori bilgisini alıp
     // bir liste haline getiriyoruz.
     return List.generate(maps.length, (i) => maps[i][columnFoodCategory] as String);
+  }
+  Future<List<TastedFoodInfo>> getTastedFoodInfoForQuests() async {
+    final db = await instance.database;
+
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT 
+        T1.$columnTastedCity, 
+        T2.$columnFoodCategory
+      FROM $tableUserTastedFoods AS T1
+      LEFT JOIN $tableFoods AS T2 ON T1.$columnTastedFoodName = T2.$columnName
+    ''');
+    // NOT: LEFT JOIN kullandık çünkü bir yemek 'foods' tablosunda bulunamasa bile
+    // (eski usul eklenmişse) yine de şehir bilgisini almak isteriz.
+
+    if (maps.isEmpty) {
+      return [];
+    }
+
+    return List.generate(maps.length, (i) {
+      return TastedFoodInfo(
+        cityName: maps[i][columnTastedCity] as String,
+        category: maps[i][columnFoodCategory] as String?,
+      );
+    });
   }
 }
 
