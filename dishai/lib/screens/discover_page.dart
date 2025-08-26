@@ -51,13 +51,15 @@ class UserTextMessage extends ChatMessage {
 }
 
 class DiscoverPage extends StatefulWidget {
-  const DiscoverPage({super.key});
+  DiscoverPage({Key? key}) : super(key: key); // "const" kaldırıldı ve Key? eklendi.
 
   @override
-  State<DiscoverPage> createState() => _DiscoverPageState();
+  State<DiscoverPage> createState() => DiscoverPageState();
 }
 
-class _DiscoverPageState extends State<DiscoverPage> {
+// ...
+class DiscoverPageState extends State<DiscoverPage> {
+// ...
   // --- STATE DEĞİŞKENLERİ ---
   final List<ChatMessage> _chatMessages = [];
   final ScrollController _scrollController = ScrollController();
@@ -94,7 +96,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   // --- MEVCUT, DOKUNULMAYAN METOTLAR ---
   @override
   void dispose() { _scrollController.dispose(); super.dispose(); }
-  void _onCitySelected(City city) { setState(() { _selectedCity = city; _isTransitioning = true; }); Timer(const Duration(milliseconds: 2500), () { if (!mounted || !_isTransitioning) return; _startChatFlowForCity(city); }); }
+  void _onCitySelected(City city) { setState(() { _selectedCity = city; _isTransitioning = true; }); Timer(const Duration(milliseconds: 2500), () { if (!mounted || !_isTransitioning) return; startChatFlowForCity(city); }); }
   void _resetToMapView() { setState(() { _selectedCity = null; _chatMessages.clear(); _isTransitioning = false; }); }
   void _addBotMessage(String text, {required VoidCallback onFinished}) { if ((text).isEmpty) { onFinished.call(); return; } setState(() { _chatMessages.removeWhere((msg) => msg is TypingIndicatorMessage); _chatMessages.add(StreamingTextMessage(text, onFinished: onFinished)); }); _scrollToBottom(); }
   void _onFoodTapped(FoodDetails food) => Navigator.push(context, MaterialPageRoute(builder: (context) => FoodDetailsPage(food: food)));
@@ -107,13 +109,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
   // =======================================================================
 
   // ADIM 1: Sohbeti Başlat ve Lokal Lezzetleri Sun
-  Future<void> _startChatFlowForCity(City city) async {
+  // ...
+  Future<void> startChatFlowForCity(City city) async {
+
     _showRandomInsiderTip(city);
 
     setState(() {
       _isTransitioning = false;
       _chatMessages.clear();
       _chatMessages.add(TypingIndicatorMessage());
+      _selectedCity = city;
     });
     _scrollToBottom();
     await Future.delayed(const Duration(milliseconds: 1200));
@@ -392,13 +397,29 @@ Future<void> _showIconicDish(City city) async {
   // --- BUILD METOTLARI (YAPISAL DEĞİŞİKLİK YOK, SADECE BİR WIDGET GÜNCELLENDİ) ---
   // =======================================================================
 
+  // discover_page.dart dosyasının içine, mevcut build metodunun yerine yapıştır.
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectedCity?.cityName ?? 'DishAI - Flavor Explorer'),
         backgroundColor: Colors.blue.shade300,
-        leading: _selectedCity != null ? IconButton(icon: const Icon(Icons.map_outlined), onPressed: _resetToMapView, tooltip: 'Back to Map') : null,
+        
+        // --- GÜNCELLEME BURADA ---
+        // 'leading' parametresi, AppBar'ın en solundaki widget'ı kontrol eder.
+        leading: 
+          // Eğer bir şehir seçilmişse (yani sohbet ekranındaysak)...
+          _selectedCity != null 
+            // O zaman bir "Haritaya Dön" ikon butonu göster.
+            ? IconButton(
+                icon: const Icon(Icons.map_outlined), 
+                onPressed: _resetToMapView, // Tıklanınca haritayı sıfırlayan metodu çağırır.
+                tooltip: 'Back to Map',
+              )
+            // Eğer bir şehir seçilmemişse (yani harita ekranındaysak), hiçbir şey gösterme.
+            : null,
+            
         actions: [
           IconButton(
             icon: const Icon(Icons.menu_book_outlined),

@@ -16,7 +16,7 @@ import '../models/route_stop_model.dart';
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // Veritabanı şeması değiştiği için versiyonu artırıyoruz (cities'e yeni sütunlar).
-  static const _databaseVersion = 12;
+ static const _databaseVersion = 13;
 
   // Tablo ve Sütun Sabitleri (Değişiklik Yok)
   static const tableFoods = 'foods';
@@ -54,6 +54,7 @@ class DatabaseHelper {
   static const columnRelCityId = 'city_id';
   static const columnRelFoodName = 'food_name';
   static const columnInsiderTipEn = 'insider_tip_en';
+  static const columnFeaturedImageUrl = 'featured_image_url';
 
   static const tableUserTastedFoods = 'user_tasted_foods';
   static const columnTastedId = 'id';
@@ -132,14 +133,17 @@ class DatabaseHelper {
         )
       ''');
 
-    await db.execute('''
-      CREATE TABLE $tableCityFoods (
-        $columnRelCityId INTEGER NOT NULL, $columnRelFoodName TEXT NOT NULL, $columnInsiderTipEn TEXT,
-        PRIMARY KEY ($columnRelCityId, $columnRelFoodName),
-        FOREIGN KEY ($columnRelCityId) REFERENCES $tableCities($columnCityId),
-        FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods($columnName)
-      )
-    ''');
+ await db.execute('''
+  CREATE TABLE $tableCityFoods (
+    $columnRelCityId INTEGER NOT NULL, 
+    $columnRelFoodName TEXT NOT NULL, 
+    $columnInsiderTipEn TEXT,
+    $columnFeaturedImageUrl TEXT, 
+    PRIMARY KEY ($columnRelCityId, $columnRelFoodName),
+    FOREIGN KEY ($columnRelCityId) REFERENCES $tableCities($columnCityId),
+    FOREIGN KEY ($columnRelFoodName) REFERENCES $tableFoods($columnName)
+  )
+''');
     await _createRouteTables(db);
     
     await _createPassportTables(db);
@@ -200,6 +204,14 @@ class DatabaseHelper {
         if (kDebugMode) print("✅ v12: Rota tablosuna yolculuk süreleri sütunları eklendi.");
       } catch (e) { if (kDebugMode) print("v12 Yükseltme Hatası: $e"); }
     }
+    if (oldVersion < 13) {
+  try {
+    await db.execute('ALTER TABLE $tableCityFoods ADD COLUMN featured_image_url TEXT');
+    if (kDebugMode) { print("✅ v13: city_foods tablosuna featured_image_url sütunu eklendi."); }
+  } catch (e) {
+    if (kDebugMode) { print("❗️ v13 Yükseltmesi sırasında HATA: $e"); }
+  }
+}
 
   }
   
@@ -520,20 +532,23 @@ class DatabaseHelper {
       );
     });
   }
-   /// Ana sayfada göstermek için rastgele bir yemek detayı getirir.
-  Future<FoodDetails?> getFeaturedFood() async {
+   /// Ana sayfadaki "Yemek Vitrini" için gerekli olan, resmi olan yemekleri ve şehir bilgilerini getirir.
+  Future<List<Map<String, dynamic>>> getFeaturedDishesWithCity() async {
     final db = await instance.database;
-    // Veritabanından rastgele bir satır seçmek için en verimli yol.
-    final List<Map<String, dynamic>> maps = await db.query(
-      tableFoods,
-      orderBy: 'RANDOM()',
-      limit: 1,
-    );
-    if (maps.isNotEmpty) {
-      // getFoodByName'i tekrar kullanarak kodu tekrar etmiyoruz.
-      return await getFoodByName(maps.first[columnName] as String);
-    }
-    return null;
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT
+        T1.*, 
+        T2.featured_image_url,
+        T3.id as cityId,
+        T3.city_name as cityName
+      FROM $tableFoods AS T1
+      INNER JOIN $tableCityFoods AS T2 ON T1.name = T2.food_name
+      INNER JOIN $tableCities AS T3 ON T2.city_id = T3.id
+      WHERE T2.featured_image_url IS NOT NULL AND T2.featured_image_url != ''
+      ORDER BY RANDOM()
+    ''');
+    
+    return maps;
   }
 
   /// Kullanıcının eklediği son anıyı getirir.
@@ -541,8 +556,8 @@ class DatabaseHelper {
     final db = await instance.database;
     final List<Map<String, dynamic>> maps = await db.query(
       tableUserTastedFoods,
-      orderBy: '$columnTastedDate DESC', // Tarihe göre tersten sırala
-      limit: 1, // Sadece en yenisini al
+      orderBy: '$columnTastedDate DESC',
+      limit: 1,
     );
     if (maps.isNotEmpty) {
       return TastedFood.fromMap(maps.first);
@@ -553,14 +568,10 @@ class DatabaseHelper {
   /// Kullanıcının lezzet pasaportu istatistiklerini hesaplar.
   Future<Map<String, int>> getTastedFoodStats() async {
     final db = await instance.database;
-    // Toplam tadılan yemek sayısı
     final totalCountResult = await db.rawQuery('SELECT COUNT(*) FROM $tableUserTastedFoods');
     final totalCount = Sqflite.firstIntValue(totalCountResult) ?? 0;
-
-    // Tadılan benzersiz şehir sayısı
     final cityCountResult = await db.rawQuery('SELECT COUNT(DISTINCT $columnTastedCity) FROM $tableUserTastedFoods');
     final cityCount = Sqflite.firstIntValue(cityCountResult) ?? 0;
-
     return {
       'totalDishes': totalCount,
       'citiesVisited': cityCount,
