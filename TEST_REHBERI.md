@@ -16,9 +16,9 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 Uygulamayı test etmek için lütfen aşağıdaki adımları izleyin.
 
 **1. APK Dosyasını İndirme:**
-   *   Bu projenin GitHub sayfasında, sağ tarafta bulunan **"Releases"** bölümüne tıklayın.
-   *   Açılan sayfada **"Sofra v1.0 - Yarışma Sunumu"** başlıklı sürümü göreceksiniz.
-   *   Başlığın altındaki **"Assets"** bölümünde bulunan `Sofra-v1.0.apk` dosyasına tıklayarak Android cihazınıza indirin.
+   *   Projenin ana `README.md` dosyasında bulunan **"Uygulamayı İndir (Google Drive)"** linkine tıklayın.
+   *   Açılan Google Drive sayfasında, indirme ikonuna (**sağ üstteki aşağı ok**) basın.
+   *   Google, "Bu dosya için virüs taraması yapılamıyor" şeklinde bir uyarı gösterebilir. Bu standart bir uyarıdır. **"Yine de indir"** (Download anyway) seçeneğine basarak `Sofra-v1.0.apk` dosyasını Android cihazınıza indirin.
 
 **2. Uygulamayı Yükleme (Kurulum):**
    *   İndirme tamamlandıktan sonra, telefonunuzun bildirim panelinden veya "Dosyalarım" uygulamasından indirilen `Sofra-v1.0.apk` dosyasına dokunun.
@@ -29,6 +29,7 @@ Uygulamayı test etmek için lütfen aşağıdaki adımları izleyin.
    *   Uygulamayı açın. Yeni Ana Sayfa'da bir **yükleme iskeleti (skeleton)** göreceksiniz.
    *   Bu sırada uygulama, güncel gastronomi verilerini (yemekler, şehirler, rotalar vb.) senkronize etmektedir. Bu işlem internet hızınıza bağlı olarak birkaç saniye sürebilir. Senkronizasyon tamamlandığında, Ana Sayfa içeriği otomatik olarak dolacaktır.
 
+---
 ### **2. Uygulamanın Özellikleri ve Kullanım Adımları**
 
 Uygulama, yeni Ana Sayfa ve alt navigasyon çubuğundaki diğer modüller üzerine kuruludur:
