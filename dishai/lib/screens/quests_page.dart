@@ -1,11 +1,13 @@
-// YENİ DOSYA: lib/screens/quests_page.dart
+// GÜNCELLENMİŞ VE TAM DOSYA: lib/screens/quests_page.dart (Tıklanabilir Rozetler ve Bilgi Diyaloğu)
 
 import 'package:flutter/material.dart';
 
+import '../models/badge_model.dart' as app_badge;
 import '../models/quest_model.dart';
+import '../services/badge_service.dart';
 import '../services/database_helper.dart';
 import '../services/quest_service.dart';
-import '../services/sync_service.dart'; // Anlık güncelleme için
+import '../services/sync_service.dart';
 
 class QuestsPage extends StatefulWidget {
   const QuestsPage({super.key});
@@ -14,89 +16,241 @@ class QuestsPage extends StatefulWidget {
   State<QuestsPage> createState() => _QuestsPageState();
 }
 
-class _QuestsPageState extends State<QuestsPage> {
-  // Tüm görevlerin ilerlemesini tutacak olan Future
-  late Future<List<QuestProgress>> _questsProgressFuture;
+class _QuestsPageState extends State<QuestsPage> with TickerProviderStateMixin {
+  Map<String, int>? _stats;
+  List<QuestProgress> _questsProgress = [];
+  Set<String> _unlockedBadgeIds = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Sayfa ilk açıldığında görev durumunu yükle
-    _questsProgressFuture = _loadQuestsProgress();
-    // Journal güncellendiğinde sayfayı yenilemek için dinleyici ekle
+    _loadAllData();
     journalUpdatedNotifier.addListener(_onJournalUpdate);
   }
 
   @override
   void dispose() {
-    // Sayfa kapandığında dinleyiciyi kaldır
     journalUpdatedNotifier.removeListener(_onJournalUpdate);
     super.dispose();
   }
   
   void _onJournalUpdate() {
-    // Sinyal geldiğinde, Future'ı yeniden tetikleyerek sayfayı yenile
     if (mounted) {
-      setState(() {
-        _questsProgressFuture = _loadQuestsProgress();
-      });
+      _loadAllData();
     }
   }
   
-Future<List<QuestProgress>> _loadQuestsProgress() async {
-    // 1. Veritabanından hem şehir hem kategori bilgilerini içeren listeyi çek.
-    final List<TastedFoodInfo> tastedInfo = await DatabaseHelper.instance.getTastedFoodInfoForQuests();
-    final List<QuestProgress> progressList = [];
+  Future<void> _loadAllData() async {
+    if (!mounted) return;
+    setState(() { _isLoading = true; });
 
-    // 2. Kütüphanedeki TÜM görevler için döngü başlat.
+    final stats = await DatabaseHelper.instance.getTastedFoodStats();
+    final tastedInfo = await DatabaseHelper.instance.getTastedFoodInfoForQuests();
+    final unlockedBadges = await DatabaseHelper.instance.getUnlockedBadgeIds();
+
+    final questsProgress = <QuestProgress>[];
     for (final quest in QuestService.allQuests) {
-      // 3. Her bir görevin ilerlemesini QuestService'in merkezi metoduyla hesapla.
-      final int progressCount = QuestService.calculateProgressForQuest(quest, tastedInfo);
-      
-      // 4. Hesaplanan ilerlemeyi listeye ekle.
-      progressList.add(QuestProgress(quest: quest, currentProgress: progressCount));
+      final progressCount = QuestService.calculateProgressForQuest(quest, tastedInfo);
+      questsProgress.add(QuestProgress(quest: quest, currentProgress: progressCount));
     }
 
-    return progressList;
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _questsProgress = questsProgress;
+        _unlockedBadgeIds = unlockedBadges;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flavor Quests'),
-        backgroundColor: Colors.purple.shade300,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Achievements'),
+          backgroundColor: Colors.purple.shade300,
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  _buildProfileHeader(),
+                  const TabBar(
+                    indicatorColor: Colors.purple,
+                    labelColor: Colors.purple,
+                    unselectedLabelColor: Colors.grey,
+                    tabs: [
+                      Tab(icon: Icon(Icons.flag_outlined), text: 'Quests'),
+                      Tab(icon: Icon(Icons.shield_outlined), text: 'Badges'),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildQuestsList(),
+                        _buildBadgesGrid(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
       ),
-      body: FutureBuilder<List<QuestProgress>>(
-        future: _questsProgressFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Could not load quests.'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No quests available.'));
-          }
+    );
+  }
 
-          final questsProgress = snapshot.data!;
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      color: Colors.grey.shade50,
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.purple,
+            child: Icon(Icons.person_outline, size: 40, color: Colors.white),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Gastronomy Explorer',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _StatItem(count: _stats?['totalDishes'] ?? 0, label: 'Dishes Tasted'),
+                    _StatItem(count: _stats?['citiesVisited'] ?? 0, label: 'Cities Visited'),
+                  ],
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: questsProgress.length,
-            itemBuilder: (context, index) {
-              final progress = questsProgress[index];
-              return _QuestProgressCard(progress: progress);
-            },
-          );
-        },
+  Widget _buildQuestsList() {
+    if (_questsProgress.isEmpty) {
+      return const Center(child: Text('No quests available.'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: _questsProgress.length,
+      itemBuilder: (context, index) {
+        final progress = _questsProgress[index];
+        return _QuestProgressCard(progress: progress);
+      },
+    );
+  }
+
+  Widget _buildBadgesGrid() {
+    final allBadges = BadgeService.allBadges;
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: allBadges.length,
+      itemBuilder: (context, index) {
+        final badge = allBadges[index];
+        final isUnlocked = _unlockedBadgeIds.contains(badge.id);
+        return _BadgeCard(badge: badge, isUnlocked: isUnlocked);
+      },
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final int count;
+  final String label;
+  const _StatItem({required this.count, required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(count.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple)),
+        Text(label, style: TextStyle(color: Colors.grey.shade600)),
+      ],
+    );
+  }
+}
+
+class _BadgeCard extends StatelessWidget {
+  final app_badge.Badge badge;
+  final bool isUnlocked;
+
+  const _BadgeCard({required this.badge, required this.isUnlocked});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (_) => _BadgeInfoDialog(badge: badge, isUnlocked: isUnlocked),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // KATMAN 1: Her zaman rozetin kilidi AÇIK ve RENKLİ halini göster.
+              Image.asset(
+                badge.unlockedAssetPath,
+                height: 80,
+                width: 80,
+              ),
+
+              // KATMAN 2: Eğer rozet kilitliyse, üzerine şeffaf bir kilit ikonu koy.
+              if (!isUnlocked)
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    // Rozetin şekline tam oturması için
+                    shape: BoxShape.circle, 
+                    // Yarı şeffaf siyah bir katman
+                    color: Colors.black.withOpacity(0.4), 
+                  ),
+                  child: Icon(
+                    Icons.lock,
+                    color: Colors.white.withOpacity(0.9),
+                    size: 40,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            badge.title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isUnlocked ? Colors.black87 : Colors.grey.shade700, // Kilitli metni biraz daha belirgin yaptık
+            ),
+          )
+        ],
       ),
     );
   }
 }
 
-// Görevleri listeleyen kart widget'ı
 class _QuestProgressCard extends StatelessWidget {
   final QuestProgress progress;
   const _QuestProgressCard({required this.progress});
@@ -169,6 +323,106 @@ class _QuestProgressCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// --- YENİ EKLENEN WIDGET ---
+// Rozetlere tıklandığında gösterilecek olan bilgilendirme diyaloğu.
+class _BadgeInfoDialog extends StatelessWidget {
+  final app_badge.Badge badge;
+  final bool isUnlocked;
+
+  const _BadgeInfoDialog({required this.badge, required this.isUnlocked});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // --- DEĞİŞİKLİK BURADA ---
+          // Artık 'isUnlocked' kontrolü yapmıyoruz.
+          // Diyalog her zaman rozetin kilidi açılmış, renkli görselini gösterir.
+          Image.asset(
+            badge.unlockedAssetPath,
+            width: 100,
+            height: 100,
+          ),
+          const SizedBox(height: 20),
+
+          // Rozet Başlığı
+          Text(
+            badge.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          // Rozet Açıklaması (Nasıl kazanıldığı)
+          Text(
+            badge.description,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 24),
+          
+          // Durum bilgisi (Kilitli veya Açık)
+          if (!isUnlocked)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lock_outline, color: Colors.grey.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Locked",
+                    style: TextStyle(
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+           if (isUnlocked)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline, color: Colors.green.shade800, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Unlocked!",
+                    style: TextStyle(
+                      color: Colors.green.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("Close"),
+        )
+      ],
+      actionsAlignment: MainAxisAlignment.center,
     );
   }
 }

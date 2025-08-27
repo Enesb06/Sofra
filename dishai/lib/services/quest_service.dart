@@ -160,7 +160,7 @@ class QuestService {
   /// Eğer hepsi tamamlandıysa, ilk görevi gösterir.
   static Quest getNextUncompletedQuest(List<TastedFoodInfo> tastedInfo) {
     for (final quest in allQuests) {
-      if (!_isQuestCompleted(quest, tastedInfo)) {
+      if (!isQuestCompleted(quest, tastedInfo)) {
         return quest;
       }
     }
@@ -169,7 +169,7 @@ class QuestService {
   }
 
   /// Bir görevin tamamlanıp tamamlanmadığını kontrol eden özel yardımcı metot.
-  static bool _isQuestCompleted(Quest quest, List<TastedFoodInfo> tastedInfo) {
+  static bool isQuestCompleted(Quest quest, List<TastedFoodInfo> tastedInfo) {
       int progressCount = calculateProgressForQuest(quest, tastedInfo);
       return progressCount >= quest.totalTarget;
   }

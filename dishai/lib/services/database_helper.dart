@@ -24,7 +24,7 @@ class TastedFoodInfo {
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // Veritabanı şeması değiştiği için versiyonu artırıyoruz (cities'e yeni sütunlar).
- static const _databaseVersion = 13;
+static const _databaseVersion = 14; // Yeni
 
   // Tablo ve Sütun Sabitleri (Değişiklik Yok)
   static const tableFoods = 'foods';
@@ -99,6 +99,10 @@ class DatabaseHelper {
   static const columnStopLatitude = 'latitude';
   static const columnStopLongitude = 'longitude';
 
+
+   static const tableUserBadges = 'user_badges';
+  static const columnBadgeId = 'badge_id';
+
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
@@ -155,6 +159,14 @@ class DatabaseHelper {
     await _createRouteTables(db);
     
     await _createPassportTables(db);
+
+    await db.execute('''
+      CREATE TABLE $tableUserBadges (
+        $columnBadgeId TEXT PRIMARY KEY
+      )
+    ''');
+
+
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -221,7 +233,18 @@ class DatabaseHelper {
   }
 }
 
+   if (oldVersion < 14) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableUserBadges (
+          $columnBadgeId TEXT PRIMARY KEY
+        )
+      ''');
+       if (kDebugMode) { print("✅ v14: user_badges tablosu oluşturuldu."); }
+    }
   }
+
+
+  
   
    // --- YENİ: Rota tablolarını oluşturan yardımcı metot ---
      Future<void> _createRouteTables(Database db) async {
@@ -634,6 +657,25 @@ class DatabaseHelper {
         category: maps[i][columnFoodCategory] as String?,
       );
     });
+  }
+   /// [YENİ - ROZETLER İÇİN]
+  /// Kullanıcının kazandığı bir rozeti veritabanına ekler.
+  Future<void> addUserBadge(String badgeId) async {
+    final db = await instance.database;
+    await db.insert(
+      tableUserBadges,
+      {columnBadgeId: badgeId},
+      conflictAlgorithm: ConflictAlgorithm.ignore, // Eğer zaten varsa, hata verme.
+    );
+  }
+
+  /// [YENİ - ROZETLER İÇİN]
+  /// Kullanıcının kazandığı tüm rozetlerin ID'lerini bir Set olarak döndürür.
+  /// Set kullanmak, 'bu rozet kazanıldı mı?' kontrolünü çok hızlı yapar.
+  Future<Set<String>> getUnlockedBadgeIds() async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(tableUserBadges);
+    return maps.map((map) => map[columnBadgeId] as String).toSet();
   }
 }
 
