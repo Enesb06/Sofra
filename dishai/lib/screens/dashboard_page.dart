@@ -1,7 +1,10 @@
-// FİNAL TASARIM v4: lib/screens/dashboard_page.dart (Lezzet Görevi Entegre Edilmiş)
+// FİNAL TASARIM v5: lib/screens/dashboard_page.dart (Üçlü Eylem Butonları ile)
+
+import 'package:dishai/screens/add_memory_page.dart';
 
 import 'dart:async';
 import 'dart:io';
+import 'package:dishai/screens/add_memory_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,13 +25,12 @@ import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
 
 import '../services/sync_service.dart';
-
-// <-- YENİ IMPORTLAR -->
 import '../models/quest_model.dart';
 import '../services/quest_service.dart';
 import 'quests_page.dart';
-
 import '../services/badge_check_service.dart';
+import 'favorites_page.dart';
+import 'journal_page.dart'; // <-- Bu yeni sayfayı import et
 
 typedef TabNavigationRequest = void Function(int tabIndex, {City? city});
 typedef FoodNavigationRequest = void Function(FoodDetails food);
@@ -53,9 +55,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   late Future<List<Map<String, dynamic>>> _featuredDishesFuture;
   TastedFood? _latestMemory;
-  Map<String, int>? _stats;
-
-  // <-- YENİ STATE DEĞİŞKENİ -->
   QuestProgress? _currentQuestProgress;
 
   @override
@@ -75,14 +74,8 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) {
       print(
           "🔄 Dashboard: Journal güncelleme sinyali alındı, veriler yenileniyor...");
-
-      // 1. Önce dashboard verilerini yenile (bu setState içerir).
       await _loadDashboardData();
-
-      // 2. Veriler yenilendikten sonra, rozet kontrolünü tetikle.
-      //    context'i parametre olarak veriyoruz ki diyalog gösterebilsin.
       if (mounted) {
-        // await'ten sonra tekrar kontrol etmek en güvenlisidir.
         await BadgeCheckService.checkAndAwardBadges(context);
       }
     }
@@ -140,34 +133,22 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  // <-- YENİ MANTIK İLE GÜNCELLENMİŞ _loadDashboardData METODU -->
-  // lib/screens/dashboard_page.dart -> _DashboardPageState içinde
-
   Future<void> _loadDashboardData() async {
     _featuredDishesFuture = DatabaseHelper.instance.getFeaturedDishesWithCity();
     _latestMemory = await DatabaseHelper.instance.getLatestTastedFood();
-    _stats = await DatabaseHelper.instance.getTastedFoodStats();
 
-    // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
-
-    // 1. Veritabanından hem şehir hem kategori bilgilerini içeren listeyi çek.
     final List<TastedFoodInfo> tastedInfo =
         await DatabaseHelper.instance.getTastedFoodInfoForQuests();
 
-    // 2. QuestService'e bu listeyi vererek Dashboard'da gösterilecek görevi al.
     final Quest currentQuest = QuestService.getNextUncompletedQuest(tastedInfo);
 
-    // 3. QuestService'in merkezi hesaplama metodunu kullanarak bu görevin ilerlemesini hesapla.
     final int progressCount =
         QuestService.calculateProgressForQuest(currentQuest, tastedInfo);
 
-    // 4. State'i güncelle.
     _currentQuestProgress = QuestProgress(
       quest: currentQuest,
       currentProgress: progressCount,
     );
-
-    // --- DEĞİŞİKLİK BİTTİ ---
 
     if (mounted) setState(() {});
   }
@@ -184,7 +165,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-    Widget _buildDashboard() {
+  // KENDİ DOSYANDAKİ _buildDashboard METODUNU BUNUNLA DEĞİŞTİR
+
+  Widget _buildDashboard() {
+    bool hasMemories = _latestMemory != null;
+
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -193,16 +178,8 @@ class _DashboardPageState extends State<DashboardPage> {
           pinned: true,
           expandedHeight: 120.0,
           flexibleSpace: FlexibleSpaceBar(
-            titlePadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            title: Text(
-              'DishAI Envoy',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-              ),
-            ),
+            titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            title: Text( 'DishAI Envoy', style: TextStyle( color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22,), ),
             background: Container(color: Colors.transparent),
           ),
         ),
@@ -212,16 +189,8 @@ class _DashboardPageState extends State<DashboardPage> {
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _featuredDishesFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(height: 220);
-                }
-                if (snapshot.hasError ||
-                    !snapshot.hasData ||
-                    snapshot.data!.isEmpty) {
-                  return const SizedBox(
-                      height: 220,
-                      child: Center(child: Text("No featured dishes found.")));
-                }
+                if (snapshot.connectionState == ConnectionState.waiting) { return const SizedBox(height: 220); }
+                if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) { return const SizedBox(height: 220, child: Center(child: Text("No featured dishes found."))); }
                 final dishes = snapshot.data!;
                 return _DishCarousel(
                   dishes: dishes,
@@ -230,10 +199,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     widget.onNavigateToFood(food);
                   },
                   onCityTapped: (dishData) {
-                    final city = City(
-                        id: dishData['cityId'],
-                        cityName: dishData['cityName'],
-                        normalizedCityName: '');
+                    final city = City(id: dishData['cityId'], cityName: dishData['cityName'], normalizedCityName: '');
                     widget.onNavigateToTab(1, city: city);
                   },
                 );
@@ -241,25 +207,76 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 24),
 
-            // --- DEĞİŞİKLİK BURADA YAPILDI ---
-            // 'if' bloğunun içeriğinden _StatsCard ile ilgili satırlar kaldırıldı.
-            if (_latestMemory != null ||
-                _currentQuestProgress != null ||
-                (_stats != null && _stats!['totalDishes']! > 0) 
-            ) ...[
-              _buildSectionHeader("Your Culinary Journey"),
-
+            _buildSectionHeader("Your Culinary Journey"),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _DashboardActionButton(
+                      icon: Icons.add_a_photo_outlined,
+                      label: "Add Memory",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AddMemoryPage()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DashboardActionButton(
+                      icon: Icons.auto_stories_outlined, // Anı Kitabı/Journal ikonu
+                      label: "Journal",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const JournalPage()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                   Expanded(
+                    child: _DashboardActionButton(
+                      icon: Icons.favorite_border,
+                      label: "Favorites",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const FavoritesPage()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DashboardActionButton(
+                      icon: Icons.emoji_events_outlined,
+                      label: "Achievements",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const QuestsPage()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            if (hasMemories) ...[
+              const SizedBox(height: 8),
               if (_currentQuestProgress != null)
                 _FlavorQuestCard(progress: _currentQuestProgress!),
 
-              if (_latestMemory != null)
+              if (_latestMemory != null) 
                 _LatestMemoryCard(memory: _latestMemory!),
-                
-              // _StatsCard ve ilgili SizedBox buradan kaldırıldı.
-
-            ] else ...[
-              _EmptyStateCard()
             ],
+            
             const SizedBox(height: 24),
           ]),
         ),
@@ -328,6 +345,50 @@ class _DashboardPageState extends State<DashboardPage> {
               style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _DashboardActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.indigo.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.indigo, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -556,77 +617,6 @@ class _LatestMemoryCard extends StatelessWidget {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  final Map<String, int> stats;
-  const _StatsCard({required this.stats});
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _StatItem(count: stats['totalDishes'] ?? 0, label: "Dishes Tasted"),
-            _StatItem(
-                count: stats['citiesVisited'] ?? 0, label: "Cities Visited"),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final int count;
-  final String label;
-  const _StatItem({required this.count, required this.label});
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(count.toString(),
-            style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo)),
-        Text(label),
-      ],
-    );
-  }
-}
-
-class _EmptyStateCard extends StatelessWidget {
-  const _EmptyStateCard();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      color: Colors.indigo.withOpacity(0.05),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            const Icon(Icons.menu_book_rounded, size: 40, color: Colors.indigo),
-            const SizedBox(height: 12),
-            const Text("Your Flavor Passport is Empty",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text(
-                "Start logging the dishes you taste to see your journey here!",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SkeletonBox extends StatelessWidget {
   final double width;
   final double height;
@@ -647,7 +637,6 @@ class _SkeletonBox extends StatelessWidget {
   }
 }
 
-// <-- YENİ WIDGET: Flavor Quest Kartı -->
 class _FlavorQuestCard extends StatelessWidget {
   final QuestProgress progress;
 
@@ -655,7 +644,6 @@ class _FlavorQuestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // İlerleme yüzdesini hesapla (0.0 ile 1.0 arasında)
     final double percentage = progress.quest.totalTarget == 0
         ? 0
         : progress.currentProgress / progress.quest.totalTarget;
@@ -665,12 +653,10 @@ class _FlavorQuestCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       shadowColor: Colors.purple.withOpacity(0.2),
-      // --- DEĞİŞİKLİK 1: Kartı tıklanabilir yapmak için InkWell ile sarmalıyoruz ---
       child: InkWell(
         borderRadius: BorderRadius.circular(
-            12), // Tıklama efektinin kenarları yuvarlak olsun
+            12),
         onTap: () {
-          // Tıklandığında QuestsPage'i aç
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const QuestsPage()),
@@ -681,20 +667,19 @@ class _FlavorQuestCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- DEĞİŞİKLİK 2: Kart başlığını "See All" butonu içerecek şekilde güncelliyoruz ---
               Row(
                 children: [
                   Icon(Icons.flag_outlined, color: Colors.purple.shade600),
                   const SizedBox(width: 8),
                   Text(
-                    "Your Next Quest", // Başlığı daha açıklayıcı yaptık
+                    "Your Next Quest",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey.shade600,
                     ),
                   ),
-                  const Spacer(), // Araya boşluk koyarak butonu sağa yaslıyoruz
+                  const Spacer(),
                   const Text(
                     "See All",
                     style: TextStyle(
@@ -708,8 +693,6 @@ class _FlavorQuestCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-
-              // --- DEĞİŞİKLİK YOK: Geri kalan kısım tamamen aynı ---
               Text(
                 progress.quest.title,
                 style: const TextStyle(
