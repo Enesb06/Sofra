@@ -184,8 +184,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // <-- YENİ KART İLE GÜNCELLENMİŞ _buildDashboard METODU -->
-  Widget _buildDashboard() {
+    Widget _buildDashboard() {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -241,16 +240,23 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
             const SizedBox(height: 24),
+
+            // --- DEĞİŞİKLİK BURADA YAPILDI ---
+            // 'if' bloğunun içeriğinden _StatsCard ile ilgili satırlar kaldırıldı.
             if (_latestMemory != null ||
-                (_stats != null && (_stats!['totalDishes']! > 0)) ||
-                _currentQuestProgress != null) ...[
+                _currentQuestProgress != null ||
+                (_stats != null && _stats!['totalDishes']! > 0) 
+            ) ...[
               _buildSectionHeader("Your Culinary Journey"),
+
               if (_currentQuestProgress != null)
                 _FlavorQuestCard(progress: _currentQuestProgress!),
+
               if (_latestMemory != null)
                 _LatestMemoryCard(memory: _latestMemory!),
-              if (_stats != null) const SizedBox(height: 16),
-              if (_stats != null) _StatsCard(stats: _stats!),
+                
+              // _StatsCard ve ilgili SizedBox buradan kaldırıldı.
+
             ] else ...[
               _EmptyStateCard()
             ],
