@@ -99,8 +99,7 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Scan Menu'),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.indigo,
-        unselectedItemColor: Colors.grey.shade600,
+        
         // Alttaki bara tıklandığında sadece index gider, city null olur.
         onTap: (index) => _onItemTapped(index), 
         type: BottomNavigationBarType.fixed, 

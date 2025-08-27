@@ -43,7 +43,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isBotTyping = false;
   
-  // --- DEĞİŞİKLİK 1: AudioPlayer'ı burada oluşturmuyoruz.
   late AudioPlayer _audioPlayer;
   bool _isAudioPlaying = false;
   String _currentlyPlayingFood = '';
@@ -51,12 +50,10 @@ class _RecognitionPageState extends State<RecognitionPage> {
   @override
   void initState() {
     super.initState();
-    // --- DEĞİŞİKLİK 2: AudioPlayer'ı burada, state ilk kez oluşturulurken yaratıyoruz.
     _createNewAudioPlayer();
     _loadModel();
   }
   
-  // YENİ METOT: AudioPlayer'ı oluşturur ve ayarlarını yapar.
   void _createNewAudioPlayer() {
     _audioPlayer = AudioPlayer();
     _audioPlayer.onPlayerStateChanged.listen((state) {
@@ -70,7 +67,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
   void dispose() {
     _interpreter?.close();
     _scrollController.dispose();
-    _audioPlayer.dispose(); // Sayfa yok edilirken player'ı da yok et.
+    _audioPlayer.dispose();
     super.dispose();
   }
   
@@ -85,16 +82,10 @@ class _RecognitionPageState extends State<RecognitionPage> {
     }
   }
 
-  // --- DEĞİŞİKLİK 3: _resetState metodunun son ve en güvenli hali ---
   Future<void> _resetState() async {
-    // 1. Önce, mevcut AudioPlayer'ı tamamen yok et.
-    //    Bu asenkron bir işlem olabilir, bu yüzden beklemek en güvenlisidir.
     await _audioPlayer.dispose();
-
-    // 2. Sıfırdan, temiz bir AudioPlayer ve dinleyicisi oluştur.
     _createNewAudioPlayer();
 
-    // 3. Her şey temizlendikten sonra Flutter state'ini güncelle.
     if (mounted) {
       setState(() {
         _image = null;
@@ -110,7 +101,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
   }
   
   Future<void> _pickImage() async {
-    await _resetState(); // Önceki oturumdan kalan her şeyi güvenle temizle.
+    await _resetState();
     
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) {
@@ -232,11 +223,11 @@ class _RecognitionPageState extends State<RecognitionPage> {
           final listener = _audioPlayer.onPlayerStateChanged.listen((state) { setStateInBubble(() {}); });
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration( color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20).copyWith(topLeft: const Radius.circular(4)), ),
+            decoration: BoxDecoration( color: Colors.deepOrange.shade50, borderRadius: BorderRadius.circular(20).copyWith(topLeft: const Radius.circular(4)), ),
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon( isThisPlaying ? Icons.stop_circle_outlined : Icons.play_circle_filled_outlined, color: Colors.deepOrange.shade600, size: 36, ),
+                  icon: Icon( isThisPlaying ? Icons.stop_circle_outlined : Icons.play_circle_filled_outlined, color: Theme.of(context).colorScheme.secondary, size: 36, ),
                   onPressed: () async {
                     if (isThisPlaying) { await _audioPlayer.stop(); } else {
                       try { await _audioPlayer.stop(); setState(() { _currentlyPlayingFood = foodName; }); await _audioPlayer.play(AssetSource('audio/$foodName.mp3')); } catch (e) {
@@ -263,18 +254,16 @@ class _RecognitionPageState extends State<RecognitionPage> {
   String _generateSpiceLevelText(int? level) { if (level == null) return "Unknown"; switch (level) { case 1: return "🌶️ (Not Spicy)"; case 2: return "🌶️🌶️ (Mild)"; case 3: return "🌶️🌶️🌶️ (Medium)"; case 4: return "🌶️🌶️🌶️🌶️ (Spicy)"; case 5: return "🌶️🌶️🌶️🌶️🌶️ (Very Spicy)"; default: return "Not specified"; } }
   String _generateAllergenText(FoodDetails food) { List<String> allergens = []; if (food.containsGluten) allergens.add("Gluten"); if (food.containsDairy) allergens.add("Dairy"); if (food.containsNuts) allergens.add("Nuts"); return allergens.isEmpty ? "No major allergens specified." : "Contains: ${allergens.join(', ')}."; }
   
-  // Build metodu da senkronizasyon kontrolünden arındırıldı.
   @override
   Widget build(BuildContext context) {
-    // Sadece modelin yüklenip yüklenmediğini kontrol ediyor.
     if (!_modelLoaded) {
       return Scaffold(
-        appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy'), backgroundColor: Colors.deepOrange.shade300),
+        appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy')),
         body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 20), Text("Preparing AI model...", style: TextStyle(fontSize: 16, color: Colors.grey))])),
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy'), backgroundColor: Colors.deepOrange.shade300, actions: [if (_isChatActive) IconButton(icon: const Icon(Icons.refresh), onPressed: _resetState, tooltip: 'Start Over')]),
+      appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy'), actions: [if (_isChatActive) IconButton(icon: const Icon(Icons.refresh), onPressed: _resetState, tooltip: 'Start Over')]),
       body: Column(children: [
         if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover))),
         if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
@@ -284,12 +273,79 @@ class _RecognitionPageState extends State<RecognitionPage> {
           return message.isFromUser ? _buildUserMessage(message as UserTextMessage) : _buildBotMessage(message);
         })),
       ]),
-      floatingActionButton: FloatingActionButton(onPressed: (_modelLoaded && !_loading) ? _pickImage : null, tooltip: 'Select Photo', backgroundColor: (_modelLoaded && !_loading) ? Colors.deepOrange : Colors.grey, child: const Icon(Icons.camera_alt)),
+      floatingActionButton: FloatingActionButton(onPressed: (_modelLoaded && !_loading) ? _pickImage : null, tooltip: 'Select Photo', child: const Icon(Icons.camera_alt)),
     );
   }
 
-  // Widget build metotlarında bir değişiklik yok.
-  Widget _buildUserMessage(UserTextMessage message) { return Align(alignment: Alignment.centerRight, child: Container(padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16), margin: const EdgeInsets.symmetric(vertical: 4).copyWith(left: 60), decoration: BoxDecoration(color: Colors.deepOrange.shade400, borderRadius: BorderRadius.circular(20)), child: Text(message.text, style: const TextStyle(fontSize: 16, color: Colors.white)))); }
-  Widget _buildBotMessage(ChatMessage message) { Widget messageContent; if (message is StreamingTextMessage) { messageContent = TypewriterChatMessage(text: message.text, onCharacterTyped: _scrollToBottom, onFinishedTyping: message.onFinished); } else if (message is ButtonOptionsMessage) { messageContent = _buildButtonOptions(message); } else if (message is TypingIndicatorMessage) { messageContent = const AnimatedTypingIndicator(); } else if (message is CustomWidgetMessage) { messageContent = message.child; } else { messageContent = const SizedBox.shrink(); } return Padding(padding: const EdgeInsets.symmetric(vertical: 4.0), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const CircleAvatar(backgroundColor: Colors.grey, child: Icon(Icons.ramen_dining_outlined, color: Colors.white, size: 20)), const SizedBox(width: 8), Expanded(child: messageContent)])); }
-  Widget _buildButtonOptions(ButtonOptionsMessage message) { return AbsorbPointer(absorbing: _isBotTyping, child: Opacity(opacity: _isBotTyping ? 0.5 : 1.0, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: message.options.map((option) => Container(width: double.infinity, margin: const EdgeInsets.symmetric(vertical: 4.0), child: OutlinedButton(onPressed: () { setState(() { _chatMessages.remove(message); }); option.onPressed(); }, style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.deepOrange.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(vertical: 12)), child: Text(option.text, style: TextStyle(color: Colors.deepOrange.shade800, fontWeight: FontWeight.bold))))).toList()))); }
+  Widget _buildUserMessage(UserTextMessage message) { 
+    return Align(
+      alignment: Alignment.centerRight, 
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16), 
+        margin: const EdgeInsets.symmetric(vertical: 4).copyWith(left: 60), 
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondary, // Temanın ikincil rengi
+          borderRadius: BorderRadius.circular(20)
+        ), 
+        child: Text(message.text, style: const TextStyle(fontSize: 16, color: Colors.white))
+      )
+    ); 
+  }
+  
+  Widget _buildBotMessage(ChatMessage message) { 
+    Widget messageContent; 
+    if (message is StreamingTextMessage) { 
+      messageContent = TypewriterChatMessage(text: message.text, onCharacterTyped: _scrollToBottom, onFinishedTyping: message.onFinished); 
+    } else if (message is ButtonOptionsMessage) { 
+      messageContent = _buildButtonOptions(message); 
+    } else if (message is TypingIndicatorMessage) { 
+      messageContent = const AnimatedTypingIndicator(); 
+    } else if (message is CustomWidgetMessage) { 
+      messageContent = message.child; 
+    } else { 
+      messageContent = const SizedBox.shrink(); 
+    } 
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0), 
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [
+          const CircleAvatar(
+            backgroundColor: Colors.grey, 
+            child: Icon(Icons.ramen_dining_outlined, color: Colors.white, size: 20)
+          ), 
+          const SizedBox(width: 8), 
+          Expanded(child: messageContent)
+        ]
+      )
+    ); 
+  }
+  
+  Widget _buildButtonOptions(ButtonOptionsMessage message) { 
+    return AbsorbPointer(
+      absorbing: _isBotTyping, 
+      child: Opacity(
+        opacity: _isBotTyping ? 0.5 : 1.0, 
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, 
+          children: message.options.map((option) => Container(
+            width: double.infinity, 
+            margin: const EdgeInsets.symmetric(vertical: 4.0), 
+            child: OutlinedButton(
+              onPressed: () { setState(() { _chatMessages.remove(message); }); option.onPressed(); }, 
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                padding: const EdgeInsets.symmetric(vertical: 12)
+              ), 
+              child: Text(
+                option.text, 
+                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)
+              )
+            )
+          )).toList()
+        )
+      )
+    ); 
+  }
 }

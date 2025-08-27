@@ -179,7 +179,7 @@ class _DashboardPageState extends State<DashboardPage> {
           expandedHeight: 120.0,
           flexibleSpace: FlexibleSpaceBar(
             titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            title: Text( 'DishAI Envoy', style: TextStyle( color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22,), ),
+                    title: Text( 'DishAI Envoy', style: TextStyle( color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold, fontSize: 22,), ),
             background: Container(color: Colors.transparent),
           ),
         ),
@@ -366,7 +366,7 @@ class _DashboardActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shadowColor: Colors.indigo.withOpacity(0.1),
+      shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onPressed,
@@ -376,15 +376,15 @@ class _DashboardActionButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.indigo, size: 28),
+              Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
               const SizedBox(height: 8),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -652,7 +652,7 @@ class _FlavorQuestCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
-      shadowColor: Colors.purple.withOpacity(0.2),
+       shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
       child: InkWell(
         borderRadius: BorderRadius.circular(
             12),
@@ -669,7 +669,7 @@ class _FlavorQuestCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.flag_outlined, color: Colors.purple.shade600),
+                   Icon(Icons.flag_outlined, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
                   Text(
                     "Your Next Quest",
@@ -680,16 +680,16 @@ class _FlavorQuestCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  const Text(
+                  Text(
                     "See All",
                     style: TextStyle(
-                        color: Colors.purple,
+                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
                         fontSize: 14),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_ios,
-                      size: 14, color: Colors.purple),
+                    Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Theme.of(context).colorScheme.primary),
                 ],
               ),
               const SizedBox(height: 12),
@@ -720,7 +720,7 @@ class _FlavorQuestCard extends StatelessWidget {
                         minHeight: 12,
                         backgroundColor: Colors.grey.shade200,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.purple.shade400),
+                            Theme.of(context).colorScheme.primary),
                       ),
                     ),
                   ),

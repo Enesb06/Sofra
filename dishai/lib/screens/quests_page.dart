@@ -72,16 +72,16 @@ class _QuestsPageState extends State<QuestsPage> with TickerProviderStateMixin {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Achievements'),
-          backgroundColor: Colors.purple.shade300,
+         
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
                   _buildProfileHeader(),
-                  const TabBar(
-                    indicatorColor: Colors.purple,
-                    labelColor: Colors.purple,
+                  TabBar(
+                    indicatorColor: Theme.of(context).colorScheme.primary,
+                    labelColor: Theme.of(context).colorScheme.primary,
                     unselectedLabelColor: Colors.grey,
                     tabs: [
                       Tab(icon: Icon(Icons.flag_outlined), text: 'Quests'),
@@ -179,7 +179,7 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(count.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple)),
+        Text(count.toString(), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
         Text(label, style: TextStyle(color: Colors.grey.shade600)),
       ],
     );
@@ -305,7 +305,7 @@ class _QuestProgressCard extends StatelessWidget {
                       minHeight: 10,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        isCompleted ? Colors.green.shade400 : Colors.purple.shade400,
+                        isCompleted ? Colors.green.shade400 : Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),

@@ -53,7 +53,7 @@ class _JournalPageState extends State<JournalPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Flavor Journal'),
-        backgroundColor: Colors.teal.shade300,
+        
       ),
       body: FutureBuilder<List<TastedFood>>(
         future: _tastedFuture,
@@ -114,8 +114,7 @@ class _JournalPageState extends State<JournalPage> {
         },
         label: const Text('Add Memory'),
         icon: const Icon(Icons.add_a_photo_outlined),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+       
       ),
     );
   }

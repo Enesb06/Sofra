@@ -32,7 +32,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Favorite Dishes'),
-        backgroundColor: Colors.red.shade300,
+        
       ),
       body: FutureBuilder<List<FoodDetails>>(
         future: _favoritesFuture,

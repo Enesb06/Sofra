@@ -21,7 +21,7 @@ class ShowToWaiterPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.black, size: 32),
+             icon: Icon(Icons.close, color: Theme.of(context).colorScheme.primary, size: 32),
               onPressed: () => Navigator.of(context).pop(),
               tooltip: 'Close',
             ),

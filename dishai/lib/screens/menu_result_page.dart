@@ -25,7 +25,7 @@ class MenuResultPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dishes Found on Menu'),
-        backgroundColor: Colors.teal.shade300,
+        
       ),
       body: Column(
         children: [

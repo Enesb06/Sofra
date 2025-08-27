@@ -28,7 +28,7 @@ class _PassportPageState extends State<PassportPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Flavor Passport'),
-          backgroundColor: Colors.teal.shade300,
+          
           bottom: const TabBar(
             indicatorColor: Colors.white,
             tabs: [
@@ -55,8 +55,7 @@ class _PassportPageState extends State<PassportPage> {
           },
           label: const Text('Add Memory'),
           icon: const Icon(Icons.add_a_photo_outlined),
-          backgroundColor: Colors.teal,
-          foregroundColor: Colors.white,
+        
         ),
       ),
     );

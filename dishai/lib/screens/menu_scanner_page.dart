@@ -100,17 +100,7 @@ class _MenuScannerPageState extends State<MenuScannerPage> {
         .replaceAll('ö', 'o');
   }
 
- // LİDER ALGORİTMASI v2 - KESİN ÇÖZÜM
-// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
 
- // ÇOKLU EŞLEŞME ALGORİTMASI
-// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
-
-// FİNAL ALGORİTMASI - ÇİFT YÖNLÜ KELİME KAPSAMA
-// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
-
- // "ANAHTAR KELİME" ALGORİTMASI - SON TAVSİYE EDİLEN VERSİYON
-// lib/screens/menu_scanner_page.dart içindeki _matchTextWithDatabase metodunu bununla değiştirin.
 
   Future<void> _matchTextWithDatabase(RecognizedText recognizedText, String imagePath) async {
     // 1. Veritabanı verilerini al ve normalleştir.
@@ -197,7 +187,7 @@ class _MenuScannerPageState extends State<MenuScannerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Menu Translator'),
-        backgroundColor: Colors.teal.shade300,
+        
       ),
       body: _isLoading || _cameraController == null
           ? const Center(child: CircularProgressIndicator())
@@ -250,12 +240,6 @@ class _MenuScannerPageState extends State<MenuScannerPage> {
               icon: const Icon(Icons.document_scanner_outlined),
               label: const Text('Scan Menu'),
               onPressed: _isScanning ? null : _scanMenu,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
             ),
           ),
         ),

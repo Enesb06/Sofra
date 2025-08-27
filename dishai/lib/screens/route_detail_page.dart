@@ -66,12 +66,12 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     return stops;
   }
 
-  Future<BitmapDescriptor> _createMarkerBitmap(String stopNumber, String venueName) async {
+  Future<BitmapDescriptor> _createMarkerBitmap(String stopNumber, String venueName, ui.Color primaryColor, ui.Color secondaryColor) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     final Size size = const Size(280, 140);
 
-    final MarkerPainter painter = MarkerPainter(stopNumber, venueName);
+    final MarkerPainter painter = MarkerPainter(stopNumber, venueName, primaryColor, secondaryColor);
     painter.paint(canvas, size);
 
     final ui.Image markerImage = await pictureRecorder.endRecording().toImage(size.width.toInt(), size.height.toInt());
@@ -81,12 +81,20 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     return BitmapDescriptor.fromBytes(uint8List);
   }
 
-  Future<void> _setupMarkers(List<RouteStop> stops) async {
+    Future<void> _setupMarkers(List<RouteStop> stops) async {
+    // Bu metodun başında context'ten renkleri alıyoruz
+    if (!mounted) return;
+    final Color primaryColor = Theme.of(context).colorScheme.primary;
+    final Color secondaryColor = Theme.of(context).colorScheme.secondary;
+
     final Set<Marker> markers = {};
     for (var stop in stops) {
+      // Hatanın olduğu yeri düzeltiyoruz:
       final BitmapDescriptor customIcon = await _createMarkerBitmap(
         stop.stopNumber.toString(),
         stop.venueName,
+        primaryColor,   // <-- EKSİK ARGÜMAN 1
+        secondaryColor  // <-- EKSİK ARGÜMAN 2
       );
 
       markers.add(
@@ -101,14 +109,13 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
         ),
       );
     }
-
+    
     if (mounted) {
       setState(() {
         _markers.addAll(markers);
       });
     }
   }
-
   void _createPolyline(List<RouteStop> stops) {
     final List<LatLng> polylineCoordinates = stops
         .map((stop) => LatLng(stop.latitude, stop.longitude))
@@ -116,7 +123,7 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
 
     final Polyline routePolyline = Polyline(
       polylineId: const PolylineId('route_line'),
-      color: const Color(0xFF6366F1),
+      color: Theme.of(context).colorScheme.primary, 
       width: 4,
       points: polylineCoordinates,
       patterns: [
@@ -321,14 +328,14 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withOpacity(0.1),
+                           color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
-                          Icons.description_outlined,
-                          color: Color(0xFF6366F1),
-                          size: 20,
-                        ),
+                        child: Icon(
+                            Icons.description_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
                       ),
                       const SizedBox(width: 12),
                       const Text(
@@ -364,13 +371,13 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                       color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child:  Icon(
                       Icons.location_on_outlined,
-                      color: Color(0xFF6366F1),
-                      size: 20,
+                     color: Theme.of(context).colorScheme.primary,
+                          size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -621,15 +628,15 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                           gradient: LinearGradient(
+                              colors: [Theme.of(context).colorScheme.secondary, Theme.of(context).colorScheme.primary],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6366F1).withOpacity(0.3),
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -699,8 +706,10 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
 class MarkerPainter extends CustomPainter {
   final String stopNumber;
   final String venueName;
+  final Color primaryColor;
+  final Color secondaryColor;
 
-  MarkerPainter(this.stopNumber, this.venueName);
+  MarkerPainter(this.stopNumber, this.venueName, this.primaryColor, this.secondaryColor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -712,8 +721,8 @@ class MarkerPainter extends CustomPainter {
     canvas.drawRRect(shadowRect, shadowPaint);
 
     final Paint gradientPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+      ..shader = LinearGradient(
+        colors: [secondaryColor, primaryColor], // <-- Renkleri burada kullan
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height - 20));
@@ -739,9 +748,9 @@ class MarkerPainter extends CustomPainter {
     final TextPainter numberPainter = TextPainter(
       text: TextSpan(
         text: stopNumber,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 24,
-          color: Color(0xFF6366F1),
+          color: primaryColor, // <-- Rengi burada kullan
           fontWeight: FontWeight.bold,
         ),
       ),

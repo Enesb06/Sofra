@@ -130,7 +130,7 @@ Future<void> _onFoodSelected(FoodDetails food) async {
     return Scaffold(
       appBar: AppBar(
         title: Text('Find Places in ${widget.city.cityName}'),
-        backgroundColor: Colors.teal.shade300,
+       
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,9 +188,11 @@ Future<void> _onFoodSelected(FoodDetails food) async {
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? Colors.teal : Colors.grey.shade300,
-                              width: isSelected ? 3 : 1,
+                             border: Border.all(
+                            // Kenarlık rengini temanın ana rengi yapıyoruz.
+                            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+                            width: isSelected ? 3 : 1,
+                          
                             ),
                           ),
                           child: CircleAvatar(
@@ -206,9 +208,10 @@ Future<void> _onFoodSelected(FoodDetails food) async {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.teal : Colors.black87,
+                           style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          // Metin rengini temanın ana rengi yapıyoruz.
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
                           ),
                         ),
                       ],

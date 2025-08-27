@@ -74,7 +74,7 @@ class _RoutesListPageState extends State<RoutesListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gourmet Routes'),
-        backgroundColor: Colors.purple.shade300,
+        
       ),
       body: ValueListenableBuilder<bool>(
         valueListenable: syncCompletedNotifier,

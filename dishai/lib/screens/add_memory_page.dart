@@ -127,7 +127,7 @@ class _AddMemoryPageState extends State<AddMemoryPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add a Food Memory'),
-        backgroundColor: Colors.teal.shade300,
+        
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -198,11 +198,6 @@ class _AddMemoryPageState extends State<AddMemoryPage> {
                 icon: _isSaving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)) : const Icon(Icons.save),
                 label: Text(_isSaving ? 'Saving...' : 'Save Memory'),
                 onPressed: _isSaving ? null : _saveMemory,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
               ),
             ],
           ),
