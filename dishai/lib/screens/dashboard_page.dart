@@ -209,60 +209,56 @@ class _DashboardPageState extends State<DashboardPage> {
 
             _buildSectionHeader("Your Culinary Journey"),
             
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
+             Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: GridView.count(
+                crossAxisCount: 4, // Yan yana 4 eleman
+                shrinkWrap: true, // İçeriği kadar yer kaplamasını sağla
+                physics: const NeverScrollableScrollPhysics(), // GridView'in kendisi kaymasın
+                mainAxisSpacing: 8, // Dikey boşluk
+                crossAxisSpacing: 8, // Yatay boşluk
+                childAspectRatio: 0.85, // Genişliğin yüksekliğe oranı (dikey olarak hafifçe uzun)
+
                 children: [
-                  Expanded(
-                    child: _DashboardActionButton(
-                      icon: Icons.add_a_photo_outlined,
-                      label: "Add Memory",
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AddMemoryPage()),
-                        );
-                      },
-                    ),
+                  _DashboardActionButton(
+                    icon: Icons.add_a_photo_outlined,
+                    label: "Add Memory",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddMemoryPage()),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DashboardActionButton(
-                      icon: Icons.auto_stories_outlined, // Anı Kitabı/Journal ikonu
-                      label: "Journal",
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const JournalPage()),
-                        );
-                      },
-                    ),
+                  _DashboardActionButton(
+                    icon: Icons.auto_stories_outlined,
+                    label: "Journal",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const JournalPage()),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 10),
-                   Expanded(
-                    child: _DashboardActionButton(
-                      icon: Icons.favorite_border,
-                      label: "Favorites",
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const FavoritesPage()),
-                        );
-                      },
-                    ),
+                  _DashboardActionButton(
+                    icon: Icons.favorite_border,
+                    label: "Favorites",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FavoritesPage()),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DashboardActionButton(
-                      icon: Icons.emoji_events_outlined,
-                      label: "Achievements",
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const QuestsPage()),
-                        );
-                      },
-                    ),
+                  _DashboardActionButton(
+                    icon: Icons.emoji_events_outlined,
+                    label: "Achievements",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const QuestsPage()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -364,31 +360,43 @@ class _DashboardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
-              const SizedBox(height: 8),
-              Text(
+    // Butonun rengini ve arkaplanını belirliyoruz
+    final color = Theme.of(context).colorScheme.primary;
+    final bgColor = color.withOpacity(0.08);
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(16), // Daha yuvarlak kenarlar
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2))
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 32), // İkon biraz daha büyük
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Text(
                 label,
                 textAlign: TextAlign.center,
+                // Metnin en fazla 2 satır olmasını sağlıyoruz
+                maxLines: 2, 
+                // Taşma durumunda kelimeleri kesmek yerine ... koyar
+                overflow: TextOverflow.ellipsis, 
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13, // Yazı boyutu biraz küçültüldü
                   fontWeight: FontWeight.bold,
-                   color: Theme.of(context).colorScheme.primary,
+                  color: color,
+                  height: 1.2, // Satır yüksekliği ayarlandı
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
