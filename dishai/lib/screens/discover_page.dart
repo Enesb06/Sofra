@@ -12,6 +12,7 @@ import 'venue_explorer_page.dart';
 import '../widgets/typewriter_chat_message.dart';
 import '../widgets/typing_indicator.dart';
 import '../models/food_tip_model.dart';
+import '../widgets/loading_animation.dart';
 
 // --- CHAT MESAJI MODELLERİ (Yapısal Değişiklik Yok) ---
 abstract class ChatMessage {
@@ -176,8 +177,7 @@ class DiscoverPageState extends State<DiscoverPage> {
             return Opacity(opacity: value, child: Transform.translate(offset: Offset(0, 15 * (1 - value)), child: Text("Discovering authentic flavors and culinary treasures", style: TextStyle(fontSize: 16, color: Colors.grey.shade600, fontWeight: FontWeight.w500), textAlign: TextAlign.center))); 
           }), 
           const SizedBox(height: 24), 
-          // TEMA DEĞİŞİKLİĞİ: CircularProgressIndicator renkleri temadan alındı.
-          SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary), backgroundColor: Colors.deepOrange.shade100)), 
+         const LoadingAnimation(size: 80),
           const SizedBox(height: 16), 
           TweenAnimationBuilder(duration: const Duration(milliseconds: 1500), tween: Tween<double>(begin: 0, end: 1), builder: (context, double value, child) { 
             return Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) { 

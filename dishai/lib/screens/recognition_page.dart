@@ -14,6 +14,7 @@ import '../services/database_helper.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/typewriter_chat_message.dart';
 import 'show_to_waiter_page.dart';
+import '../widgets/loading_animation.dart';
 
 // --- CHAT MESAJ MODELLERİ (Değişiklik yok) ---
 abstract class ChatMessage { final bool isFromUser; ChatMessage(this.isFromUser); }
@@ -259,14 +260,14 @@ class _RecognitionPageState extends State<RecognitionPage> {
     if (!_modelLoaded) {
       return Scaffold(
         appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy')),
-        body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 20), Text("Preparing AI model...", style: TextStyle(fontSize: 16, color: Colors.grey))])),
+        body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [LoadingAnimation(), SizedBox(height: 20), Text("Preparing AI model...", style: TextStyle(fontSize: 16, color: Colors.grey))])),
       );
     }
     return Scaffold(
       appBar: AppBar(title: const Text('DishAI - Gastronomy Envoy'), actions: [if (_isChatActive) IconButton(icon: const Icon(Icons.refresh), onPressed: _resetState, tooltip: 'Start Over')]),
       body: Column(children: [
         if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover))),
-        if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
+        if (_loading) const Expanded(child: LoadingAnimation()),
         if (!_isChatActive && !_loading && _image == null) const Expanded(child: Center(child: Text('Let\'s identify your dish!\nClick the camera button below.', textAlign: TextAlign.center, style: TextStyle(fontSize: 18)))),
         if (_isChatActive) Expanded(child: ListView.builder(physics: const AlwaysScrollableScrollPhysics(), controller: _scrollController, padding: const EdgeInsets.all(16.0), itemCount: _chatMessages.length, itemBuilder: (context, index) {
           final message = _chatMessages[index];

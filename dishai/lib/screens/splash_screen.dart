@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:dishai/screens/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import '../widgets/loading_animation.dart'; 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 12),
             Text( 'Your Personal Turkish Gastronomy Envoy', style: GoogleFonts.poppins( fontSize: 16, color: Colors.grey.shade700, ), ),
             const SizedBox(height: 50),
-            const CircularProgressIndicator(), // Renk artık temadan geliyor.
+             const LoadingAnimation(size: 80), // <-- Değişiklik
           ],
         ),
       ),

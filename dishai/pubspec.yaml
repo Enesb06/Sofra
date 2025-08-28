@@ -35,6 +35,7 @@ dependencies:
   shimmer: ^3.0.0
   flutter_dotenv: ^5.1.0
   dots_indicator: ^4.0.1
+  lottie: ^3.1.2
   
 
 dev_dependencies:
@@ -55,3 +56,4 @@ flutter:
     - assets/audio/
     - .env
     - assets/images/badges/ 
+    - assets/lottie/spoon_loading.json

@@ -8,6 +8,7 @@ import '../models/city_model.dart';
 import '../models/food_details.dart';
 import '../services/database_helper.dart';
 import '../services/places_service.dart';
+import '../widgets/loading_animation.dart';
 
 // -----------------------------------------------------------------------------
 
@@ -162,7 +163,7 @@ Future<void> _onFoodSelected(FoodDetails food) async {
           future: _foodsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: LoadingAnimation());
             }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text("No dishes found for this city."));
@@ -228,7 +229,7 @@ Future<void> _onFoodSelected(FoodDetails food) async {
 
   Widget _buildVenueList() {
     if (_isLoadingVenues) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child:LoadingAnimation());
     }
     
     if (_errorMessage != null) {
