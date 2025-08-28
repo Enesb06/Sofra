@@ -62,10 +62,19 @@ class DishAI extends StatelessWidget {
         ),
 
         // Seçili chiplerin ve sekmelerin renklerini ayarlıyoruz.
-        chipTheme: ChipThemeData(
-          selectedColor: primaryOrange.withOpacity(0.15),
+       chipTheme: ChipThemeData(
+          // Seçili chip'in arkaplan rengi
+          selectedColor: primaryOrange.withOpacity(0.20),
+          // Seçili chip'in metin ve ikon rengi
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+          secondaryLabelStyle: TextStyle(fontWeight: FontWeight.bold, color: primaryOrange),
+          // Seçili olmayan chip'in arkaplan rengi
+          backgroundColor: Colors.grey.shade100,
+          // Seçili olmayan chip'in kenarlık rengi
+          side: BorderSide(color: Colors.grey.shade300),
+          // Seçili chip'teki tik işareti rengi
           checkmarkColor: primaryOrange,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         tabBarTheme: TabBarThemeData(
           labelColor: Colors.white,

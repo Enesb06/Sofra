@@ -102,37 +102,27 @@ class _QuestsPageState extends State<QuestsPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildProfileHeader() {
+   Widget _buildProfileHeader() {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      width: double.infinity, // Genişliğin tüm alanı kaplamasını sağla
+      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
       color: Colors.grey.shade50,
-      child: Row(
+      child: Column( // Ana widget'ı Row yerine Column yapıyoruz
+        crossAxisAlignment: CrossAxisAlignment.center, // İçeriği ortala
         children: [
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.purple,
-            child: Icon(Icons.person_outline, size: 40, color: Colors.white),
+          const Text(
+            'Gastronomy Explorer',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Gastronomy Explorer',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StatItem(count: _stats?['totalDishes'] ?? 0, label: 'Dishes Tasted'),
-                    _StatItem(count: _stats?['citiesVisited'] ?? 0, label: 'Cities Visited'),
-                  ],
-                ),
-              ],
-            ),
-          )
+          const SizedBox(height: 16),
+          Row(
+            // İstatistikleri iki yana yaslamak için MainAxisAlignment.spaceAround kullanıyoruz
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatItem(count: _stats?['totalDishes'] ?? 0, label: 'Dishes Tasted'),
+              _StatItem(count: _stats?['citiesVisited'] ?? 0, label: 'Cities Visited'),
+            ],
+          ),
         ],
       ),
     );
@@ -160,6 +150,7 @@ class _QuestsPageState extends State<QuestsPage> with TickerProviderStateMixin {
         crossAxisCount: 3,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
+        childAspectRatio: 0.8,
       ),
       itemCount: allBadges.length,
       itemBuilder: (context, index) {
@@ -203,48 +194,57 @@ class _BadgeCard extends StatelessWidget {
       },
       borderRadius: BorderRadius.circular(12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        // mainAxisAlignment: MainAxisAlignment.center, // Bunu kaldırıyoruz, Expanded yönetecek
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // KATMAN 1: Her zaman rozetin kilidi AÇIK ve RENKLİ halini göster.
-              Image.asset(
-                badge.unlockedAssetPath,
-                height: 80,
-                width: 80,
+          // Rozet görselinin kaplayacağı alanı esnek hale getiriyoruz.
+          Expanded(
+            flex: 3, // Görsel, metne göre 3 kat daha fazla yer kaplasın
+            child: AspectRatio(
+              aspectRatio: 1.0, // Görselin kendisi kare olsun
+              child: Stack(
+                alignment: Alignment.center,
+                fit: StackFit.expand, // Stack'in içindekiler alanı doldursun
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(4.0), // Kenarlardan hafif boşluk
+                    child: Image.asset(
+                      badge.unlockedAssetPath,
+                    ),
+                  ),
+                  if (!isUnlocked)
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      child: Icon(
+                        Icons.lock,
+                        color: Colors.white.withOpacity(0.9),
+                        size: 40,
+                      ),
+                    ),
+                ],
               ),
-
-              // KATMAN 2: Eğer rozet kilitliyse, üzerine şeffaf bir kilit ikonu koy.
-              if (!isUnlocked)
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    // Rozetin şekline tam oturması için
-                    shape: BoxShape.circle, 
-                    // Yarı şeffaf siyah bir katman
-                    color: Colors.black.withOpacity(0.4), 
-                  ),
-                  child: Icon(
-                    Icons.lock,
-                    color: Colors.white.withOpacity(0.9),
-                    size: 40,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            badge.title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isUnlocked ? Colors.black87 : Colors.grey.shade700, // Kilitli metni biraz daha belirgin yaptık
             ),
-          )
+          ),
+          
+          // Metnin kaplayacağı alanı esnek hale getiriyoruz.
+          Expanded(
+            flex: 2, // Metin, görsele göre 2 kat daha fazla yer kaplasın
+            child: Center(
+              child: Text(
+                badge.title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13, // Yazı boyutu hafifçe küçültüldü
+                  fontWeight: FontWeight.bold,
+                  color: isUnlocked ? Colors.black87 : Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

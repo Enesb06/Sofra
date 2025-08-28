@@ -140,6 +140,10 @@ class _RoutesListPageState extends State<RoutesListPage> {
 
   // Bu metot artık parametre almıyor, state'teki değişkeni kullanıyor.
   Widget _buildCityFilters() {
+    // Temadan renkleri alalım
+    final theme = Theme.of(context);
+    final selectedColor = theme.colorScheme.primary;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -149,6 +153,16 @@ class _RoutesListPageState extends State<RoutesListPage> {
             label: const Text('All Cities'),
             selected: _selectedCityId == null,
             onSelected: (_) => _filterRoutes(null),
+            // Seçildiğinde daha belirgin bir görünüm için stil ekliyoruz
+            selectedColor: selectedColor.withOpacity(0.2),
+            labelStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: _selectedCityId == null ? selectedColor : Colors.grey.shade700,
+            ),
+            checkmarkColor: selectedColor,
+            side: BorderSide(
+              color: _selectedCityId == null ? selectedColor.withOpacity(0.5) : Colors.grey.shade300,
+            ),
           ),
           const SizedBox(width: 8),
           ..._citiesWithRoutes.map((city) => Padding(
@@ -157,6 +171,16 @@ class _RoutesListPageState extends State<RoutesListPage> {
                   label: Text(city.cityName),
                   selected: _selectedCityId == city.id,
                   onSelected: (_) => _filterRoutes(city.id),
+                  // Aynı stili diğer chiplere de uyguluyoruz
+                  selectedColor: selectedColor.withOpacity(0.2),
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _selectedCityId == city.id ? selectedColor : Colors.grey.shade700,
+                  ),
+                  checkmarkColor: selectedColor,
+                  side: BorderSide(
+                    color: _selectedCityId == city.id ? selectedColor.withOpacity(0.5) : Colors.grey.shade300,
+                  ),
                 ),
               )),
         ],
