@@ -23,14 +23,21 @@ Bu bir Açık Kaynak (Open Source) projesi değildir. Yarışma değerlendirme s
 
 ---
 
-## ✨ Projenin Yetenekleri
+### ✨ Özellikler (Features)
 
-*📸 Yapay Zeka ile Yemek Tanıma: Gördüğünüz bir yemeğin fotoğrafını çekin, Sofra size ne olduğunu ve hikayesini anlatsın.
-*🍜 Anlık Menü Tercümanı: Yabancı bir menüye kameranızı tutun, Sofra tanıdığı yemekleri anında sizin için çevirsin.
-*🧭 Kürate Edilmiş Gurme Rotaları: Sizin için özenle hazırladığımız tematik lezzet turlarını interaktif bir harita üzerinde deneyimleyin.
-*🗺️ Akıllı Şehir Keşfi: Bir şehri, size özel lezzetler ve mekanlar öneren bir chatbot ile sohbet ederek keşfedin.
-*📖 Kişisel Lezzet Pasaportu: Tattığınız lezzetleri ve favorilerinizi kaydederek kendi gastronomi günlüğünüzü oluşturun.
-*🏆 Lezzet Macerası ve Başarımlar: Türkiye'nin lezzet haritasını keşfederken görevleri tamamlayın, özel rozetler kazanın ve bir gastronomi ustasına dönüşün
+Sofra, zengin bir gastronomi deneyimi sunmak için bir dizi güçlü özelliği bir araya getirir:
+
+- 📸 **Yapay Zeka ile Yemek Tanıma:** Gördüğünüz bir yemeğin fotoğrafını çekin, Sofra size ne olduğunu ve hikayesini anlatsın.
+
+- 🍜 **Anlık Menü Tercümanı:** Yabancı bir menüye kameranızı tutun, Sofra tanıdığı yemekleri anında sizin için çevirsin.
+
+- 🧭 **Kürate Edilmiş Gurme Rotaları:** Sizin için özenle hazırladığımız tematik lezzet turlarını interaktif bir harita üzerinde deneyimleyin.
+
+- 🗺️ **Akıllı Şehir Keşfi:** Bir şehri, size özel lezzetler ve mekanlar öneren bir chatbot ile sohbet ederek keşfedin.
+
+- 📖 **Kişisel Lezzet Pasaportu:** Tattığınız lezzetleri ve favorilerinizi kaydederek kendi gastronomi günlüğünüzü oluşturun.
+
+- 🏆 **Lezzet Macerası ve Başarımlar:** Türkiye'nin lezzet haritasını keşfederken görevleri tamamlayın, özel rozetler kazanın ve bir gastronomi ustasına dönüşün.
 
 ---
 
