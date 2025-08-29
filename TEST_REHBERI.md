@@ -30,14 +30,20 @@ Uygulama, Ana Sayfa ve alt navigasyon çubuğundaki modüller üzerine kuruludur
 🏠 Özellik 1: Dinamik Ana Sayfa (Erişim Paneli)
 Uygulamanın açılış ekranı, size ilham vermek ve yolculuğunuzu özetlemek için tasarlanmış oyunlaştırılmış bir kontrol merkezidir.
 Nasıl Kullanılır ve Ne Test Edilmeli:
+
 Öne Çıkan Lezzetler: En üstteki büyük ve kaydırılabilir kartları inceleyin.
 Kartın üzerine tıklayarak yemeğin detay sayfasına gidin.
 Kartın altındaki şehir etiketine (örn: "Kayseri") tıklayarak, uygulamanın sizi doğrudan o şehrin seçili olduğu Discover (Keşfet) sekmesine yönlendirdiğini teyit edin.
+
 Eylem Merkezi ve Yolculuğunuz: "Your Culinary Journey" bölümündeki 4 ana butonu test edin:
 Add Memory: Oyun döngüsünü başlatan en önemli butondur.
+
 Journal: Eklediğiniz tüm anıları şık bir defter formatında gösterir.
+
 Favorites: Favorilediğiniz yemekleri listeler.
+
 Achievements: Görevlerinizi, rozetlerinizi ve genel istatistiklerinizi içeren kişisel profilinize götürür.
+
 Sıradaki Göreviniz (Your Next Quest): Bu dinamik kart, aktif görevinizi ve ilerlemenizi gösterir. Lütfen bir anı ekledikten sonra bu karttaki ilerleme çubuğunun anında güncellendiğini gözlemleyin.
 Anında Ödüllendirme: Bir anı ekleyerek bir görevi tamamlamayı veya bir rozet kazanmayı deneyin (örn: 3 farklı şehirden anı ekleyerek "Regional Traveler" rozetini kazanın). Ekranda beliren animasyonlu tebrik diyalogunu test edin.
 
