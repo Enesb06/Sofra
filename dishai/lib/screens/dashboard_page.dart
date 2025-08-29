@@ -168,7 +168,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // KENDİ DOSYANDAKİ _buildDashboard METODUNU BUNUNLA DEĞİŞTİR
 
   Widget _buildDashboard() {
-    bool hasMemories = _latestMemory != null;
+   
 
     return CustomScrollView(
       slivers: [
@@ -179,7 +179,7 @@ class _DashboardPageState extends State<DashboardPage> {
           expandedHeight: 120.0,
           flexibleSpace: FlexibleSpaceBar(
             titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    title: Text( 'DishAI Envoy', style: TextStyle( color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold, fontSize: 22,), ),
+                    title: Text( 'Sofra', style: TextStyle( color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold, fontSize: 22,), ),
             background: Container(color: Colors.transparent),
           ),
         ),
@@ -263,17 +263,19 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-            
-            if (hasMemories) ...[
-              const SizedBox(height: 8),
-              if (_currentQuestProgress != null)
-                _FlavorQuestCard(progress: _currentQuestProgress!),
+            const SizedBox(height: 8),
 
-              if (_latestMemory != null) 
-                _LatestMemoryCard(memory: _latestMemory!),
-            ],
+            // Görev kartı artık kendi koşuluyla, her zaman görünür olacak.
+            if (_currentQuestProgress != null)
+              _FlavorQuestCard(progress: _currentQuestProgress!),
+
+            // "Son Anı" kartı ise sadece bir anı varsa görünecek.
+            if (_latestMemory != null) 
+              _LatestMemoryCard(memory: _latestMemory!),
+            // --- BİTTİ ---
             
             const SizedBox(height: 24),
+           
           ]),
         ),
       ],

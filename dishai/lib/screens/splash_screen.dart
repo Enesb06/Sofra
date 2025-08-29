@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Icon( Icons.ramen_dining_outlined, size: 100.0, color: Theme.of(context).colorScheme.primary, ),
             const SizedBox(height: 24),
-            Text( 'DishAI', style: GoogleFonts.poppins( fontSize: 48, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, ), ),
+            Text( 'Sofra', style: GoogleFonts.poppins( fontSize: 48, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, ), ),
             const SizedBox(height: 12),
             Text( 'Your Personal Turkish Gastronomy Envoy', style: GoogleFonts.poppins( fontSize: 16, color: Colors.grey.shade700, ), ),
             const SizedBox(height: 50),

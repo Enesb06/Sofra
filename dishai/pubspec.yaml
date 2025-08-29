@@ -36,6 +36,7 @@ dependencies:
   flutter_dotenv: ^5.1.0
   dots_indicator: ^4.0.1
   lottie: ^3.1.2
+  shared_preferences: ^2.5.3
   
 
 dev_dependencies:

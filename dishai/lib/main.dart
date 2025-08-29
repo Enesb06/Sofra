@@ -30,7 +30,7 @@ class DishAI extends StatelessWidget {
     final Color secondaryOrange = Colors.deepOrange.shade700; // Butonlar için biraz daha canlı bir ton
 
     return MaterialApp(
-      title: 'DishAI',
+      title: 'Sofra',
       theme: ThemeData(
         // Ana renk paletini bu ideal turuncu ile başlatıyoruz.
         colorScheme: ColorScheme.fromSeed(

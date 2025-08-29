@@ -1,4 +1,3 @@
-// lib/screens/route_detail_page.dart
 
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/database_helper.dart';
 import '../models/route_model.dart';
@@ -25,6 +25,12 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
   late AnimationController _fadeAnimationController;
   late Animation<double> _fadeAnimation;
   
+  // --- YENİ EKLENEN ANİMASYON DEĞİŞKENLERİ ---
+  late final AnimationController _hintBounceController;
+  late final Animation<Offset> _hintBounceAnimation;
+  bool _showScrollHint = false;
+  // --- BİTTİ ---
+  
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   LatLng _initialCameraPosition = const LatLng(39.9334, 32.8597);
@@ -41,14 +47,47 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
       CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
     
+    _hintBounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _hintBounceAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, 0.2), // Zıplama mesafesini biraz artırdık
+    ).animate(CurvedAnimation(parent: _hintBounceController, curve: Curves.easeInOut));
+
+    _checkAndShowScrollHint();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fadeAnimationController.forward();
     });
   }
 
+  Future<void> _checkAndShowScrollHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool hasSeenHint = prefs.getBool('hasSeenRouteScrollHint') ?? false;
+
+    if (!hasSeenHint && mounted) {
+      setState(() {
+        _showScrollHint = true;
+      });
+
+      Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showScrollHint = false;
+          });
+          prefs.setBool('hasSeenRouteScrollHint', true);
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _fadeAnimationController.dispose();
+    _hintBounceController.dispose();
     super.dispose();
   }
 
@@ -81,20 +120,18 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     return BitmapDescriptor.fromBytes(uint8List);
   }
 
-    Future<void> _setupMarkers(List<RouteStop> stops) async {
-    // Bu metodun başında context'ten renkleri alıyoruz
+  Future<void> _setupMarkers(List<RouteStop> stops) async {
     if (!mounted) return;
     final Color primaryColor = Theme.of(context).colorScheme.primary;
     final Color secondaryColor = Theme.of(context).colorScheme.secondary;
 
     final Set<Marker> markers = {};
     for (var stop in stops) {
-      // Hatanın olduğu yeri düzeltiyoruz:
       final BitmapDescriptor customIcon = await _createMarkerBitmap(
         stop.stopNumber.toString(),
         stop.venueName,
-        primaryColor,   // <-- EKSİK ARGÜMAN 1
-        secondaryColor  // <-- EKSİK ARGÜMAN 2
+        primaryColor,
+        secondaryColor
       );
 
       markers.add(
@@ -116,6 +153,7 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
       });
     }
   }
+
   void _createPolyline(List<RouteStop> stops) {
     final List<LatLng> polylineCoordinates = stops
         .map((stop) => LatLng(stop.latitude, stop.longitude))
@@ -174,18 +212,46 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: Column(
+      body: Stack(
         children: [
-          // Map section - fixed height
-          Container(
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: _buildMapSection(),
+          Column(
+            children: [
+              Container(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: _buildMapSection(),
+              ),
+              Expanded(
+                child: _buildDetailsSection(),
+              ),
+            ],
           ),
-          // Details section - scrollable
-          Expanded(
-            child: _buildDetailsSection(),
-          ),
+          _buildScrollHint(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildScrollHint() {
+    return Positioned(
+      bottom: 20,
+      left: 0,
+      right: 0,
+      child: AnimatedOpacity(
+        opacity: _showScrollHint ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 500),
+        child: IgnorePointer(
+          child: SlideTransition(
+            position: _hintBounceAnimation,
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: 40, // Biraz daha belirgin
+              shadows: const [
+                Shadow(color: Colors.black38, blurRadius: 10)
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -204,24 +270,8 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
           markers: _markers,
           polylines: _polylines,
           padding: const EdgeInsets.only(top: 100),
-          style: '''[
-            {
-              "featureType": "poi",
-              "elementType": "labels.text",
-              "stylers": [{"visibility": "off"}]
-            },
-            {
-              "featureType": "poi.business",
-              "stylers": [{"visibility": "off"}]
-            },
-            {
-              "featureType": "road",
-              "elementType": "labels.icon",
-              "stylers": [{"visibility": "off"}]
-            }
-          ]''',
+          style: '''[{"featureType": "poi","elementType": "labels.text","stylers": [{"visibility": "off"}]},{"featureType": "poi.business","stylers": [{"visibility": "off"}]},{"featureType": "road","elementType": "labels.icon","stylers": [{"visibility": "off"}]}]''',
         ),
-        // Gradient overlay at top
         Positioned(
           top: 0,
           left: 0,
@@ -240,7 +290,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
             ),
           ),
         ),
-        // Back button
         Positioned(
           top: 50.0,
           left: 20.0,
@@ -278,7 +327,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
             ),
           ),
         ),
-
       ],
     );
   }
@@ -287,10 +335,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(0),
-          topRight: Radius.circular(0),
-        ),
       ),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -298,11 +342,7 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 24),
-            
-            // Duration info
             _buildDurationInfo(),
-            
-            // Divider
             Container(
               margin: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               height: 1,
@@ -316,8 +356,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
                 ),
               ),
             ),
-            
-            // Description
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -362,8 +400,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
               ),
             ),
             const SizedBox(height: 32),
-            
-            // Stops section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
@@ -393,8 +429,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
               ),
             ),
             const SizedBox(height: 16),
-            
-            // Stops list
             _buildStopsList(),
             const SizedBox(height: 24),
           ],
@@ -403,12 +437,9 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     );
   }
 
-
-
   Widget _buildDurationInfo() {
     final List<Widget> durationChips = [];
     
-    // SADECE 'travel' verisi varsa, onu kullanarak çip oluşturuyoruz.
     if (widget.route.travelWalkingMins != null) {
       durationChips.add(_buildSimpleDurationChip(
         icon: Icons.directions_walk,
@@ -425,7 +456,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
         color: const Color(0xFFEF4444),
       ));
     }
-    // Gelecekte transit eklenirse diye burası da hazır.
     if (widget.route.travelTransitMins != null) {
       durationChips.add(_buildSimpleDurationChip(
         icon: Icons.directions_bus,
@@ -447,18 +477,18 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.alt_route_outlined, // İkonu 'yol' ile değiştirdik
-                  color: Color(0xFF6366F1),
+                child: Icon(
+                  Icons.alt_route_outlined,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               const Text(
-                "Travel Times", // Başlığı güncelledik
+                "Travel Times",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -468,7 +498,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
             ],
           ),
           const SizedBox(height: 16),
-          // LayoutBuilder hala hizalama ve eşit genişlik için görev başında.
           LayoutBuilder(
             builder: (context, constraints) {
               final double totalWidth = constraints.maxWidth;
@@ -493,7 +522,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     );
   }
 
-  // YENİ VE SADELEŞTİRİLMİŞ ÇİP WIDGET'I
   Widget _buildSimpleDurationChip({
     required IconData icon,
     required String label,
@@ -508,9 +536,8 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center, // İçeriği ortala
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Renkli kutu içindeki ikon
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -520,7 +547,6 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
             child: Icon(icon, size: 14, color: Colors.white),
           ),
           const SizedBox(width: 8),
-          // Dikey Metin Grubu (Label ve Süre)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -548,36 +574,18 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
     );
   }
   
-// ... (dosyanın geri kalan tüm metotları aynı kalacak)
-  
   Widget _buildStopsList() {
     return FutureBuilder<List<RouteStop>>(
       future: _stopsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
-              ),
-            ),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
           return Center(
             child: Container(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Error loading stops",
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
+              child: Column(children: [ Icon(Icons.error_outline, size: 48, color: Colors.red.shade300), const SizedBox(height: 16), Text("Error loading stops", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),],),
             ),
           );
         }
@@ -585,16 +593,7 @@ class _RouteDetailPageState extends State<RouteDetailPage> with TickerProviderSt
           return Center(
             child: Container(
               padding: const EdgeInsets.all(32.0),
-              child: Column(
-                children: [
-                  Icon(Icons.location_off, size: 48, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No stops found',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
+              child: Column(children: [Icon(Icons.location_off, size: 48, color: Colors.grey.shade300), const SizedBox(height: 16), Text('No stops found', style: TextStyle(fontSize: 16, color: Colors.grey.shade600))]),
             ),
           );
         }
@@ -722,7 +721,7 @@ class MarkerPainter extends CustomPainter {
 
     final Paint gradientPaint = Paint()
       ..shader = LinearGradient(
-        colors: [secondaryColor, primaryColor], // <-- Renkleri burada kullan
+        colors: [secondaryColor, primaryColor],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height - 20));
@@ -750,7 +749,7 @@ class MarkerPainter extends CustomPainter {
         text: stopNumber,
         style: TextStyle(
           fontSize: 24,
-          color: primaryColor, // <-- Rengi burada kullan
+          color: primaryColor,
           fontWeight: FontWeight.bold,
         ),
       ),
