@@ -75,11 +75,11 @@ class DiscoverPageState extends State<DiscoverPage> with TickerProviderStateMixi
   int _currentSceneIndex = 0;
   
   final List<String> _sceneImages = [
-    'assets/images/scenes/scene_1.jpg',
-    'assets/images/scenes/scene_2.jpg',
-    'assets/images/scenes/scene_3.jpg',
-    'assets/images/scenes/scene_4.jpg',
-    'assets/images/scenes/scene_5.jpg',
+    'assets/images/scenes/scene_1.png',
+    'assets/images/scenes/scene_2.png',
+    'assets/images/scenes/scene_3.png',
+    'assets/images/scenes/scene_4.png',
+    'assets/images/scenes/scene_5.png',
   ];
 
   final Map<String, String> _turkishCuisineCategories = {
