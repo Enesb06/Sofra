@@ -29,7 +29,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.13.0
   camera: ^0.10.5+9
   geolocator: ^10.1.0 
-  http: ^1.1.0 # Veya daha yeni bir versiyonu
+  http: ^1.1.0 
   google_maps_flutter: ^2.12.3
   sliding_up_panel: ^2.0.0+1
   shimmer: ^3.0.0
