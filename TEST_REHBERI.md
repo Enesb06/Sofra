@@ -1,16 +1,17 @@
 # Sofra - Kullanıcı Rehberi ve Özellik Tanıtımı
 
 Sayın Jüri Üyesi,  
-Bu rehber, **Sofra uygulamasının** temel özelliklerini, yeteneklerini ve kullanıcıyı bir **"Lezzet Kaşifi"**ne dönüştüren oyunlaştırılmış yapısını test etmeniz için hazırlanmıştır.  
 
-Sofra, statik bir yemek ansiklopedisi olmanın ötesinde, sizi **Türkiye'nin zengin mutfak kültüründe** bir maceraya çıkaran interaktif bir yol arkadaşıdır.
+Sofra, Türkiye'ye gelen turistler için tasarlanmış kapsamlı bir dijital gastronomi elçisidir. Amacımız, zengin Türk mutfak kültürünü interaktif ve oyunlaştırılmış bir deneyimle tanıtmak, aynı zamanda gezginler için menüleri anlayan, lezzetleri tanıyan ve yeni tatlar keşfettiren akıllı bir rehber olmaktır. Bu uygulama, her tabağın arkasındaki hikayeyi anlatarak, bir yemek gezisini unutulmaz bir kültürel yolculuğa dönüştürmeyi hedefler.  
+
+Bu rehber, Sofra uygulamasının temel özelliklerini, teknik yeteneklerini ve kullanıcıyı bir **"Lezzet Kaşifi"**ne dönüştüren oyunlaştırılmış yapısını adım adım test etmeniz için Türkçe olarak hazırlanmıştır. Uygulama arayüzü İngilizce olduğundan, ilgili buton ve metinlerin Türkçe karşılıkları parantez içinde belirtilmiştir.
 
 ---
 
 ## ⚠️ Projenin Mevcut Durumu Hakkında Bilgilendirme
 Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdaki noktaları göz önünde bulundurmanızı rica ederiz:
 
-- **İçerik:** 10 şehir ve bu şehirlere ait yüzlerce yemek bulunmaktadır.  
+- **İçerik:** 11 şehir ve bu şehirlere ait yüzlerce yemek bulunmaktadır.  
 - **Gurme Rotaları:** Bu özellik şu anda sadece **Ankara** şehri için hazırlanmış rotalar içermektedir.  
 
 ---
@@ -18,10 +19,12 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 ## 1. Kurulum ve İlk Açılış
 
 ### 1.1. APK Dosyasını İndirme
-1. Projenin ana **README.md** dosyasında bulunan **"Uygulamayı İndir (Google Drive)"** linkine tıklayın.  
-2. Açılan Google Drive sayfasında, indirme ikonuna (sağ üstteki aşağı ok) basın.  
-3. Google, **"Bu dosya için virüs taraması yapılamıyor"** uyarısı gösterebilir. Bu standarttır.  
-4. **"Yine de indir" (Download anyway)** seçeneğine basarak **Sofra-v1.0.apk** dosyasını Android cihazınıza indirin.  
+1. Lütfen Android telefonunuzdan projemizin reposunu açın.  
+2. Projenin ana **README.md** dosyasında bulunan **"Uygulamayı İndir (Google Drive)"** linkine tıklayın.  
+3. Açılan Google Drive sayfasında, indirme ikonuna (sağ üstteki aşağı ok) basın.  
+4. Google, **"Bu dosya için virüs taraması yapılamıyor"** uyarısı gösterebilir. Bu standarttır.  
+5. **"Yine de indir" (Download anyway)** seçeneğine basarak **Sofra-v1.0.apk** dosyasını Android cihazınıza indirin.  
+6. İndirme süreci yavaş olabilir, lütfen iptal etmeyin. Sabırla bekleyin, sorunsuz bir şekilde indirme süreci tamamlanacaktır.  
 
 ### 1.2. Uygulamayı Yükleme (Kurulum)
 1. İndirme tamamlandıktan sonra, telefonunuzun bildirim panelinden veya **"Dosyalarım"** uygulamasından indirilen **Sofra-v1.0.apk** dosyasına dokunun.  
@@ -35,89 +38,93 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 
 ---
 
-## 2. Uygulamanın Özellikleri ve Kullanım Adımları
-Uygulama, **Ana Sayfa** ve **alt navigasyon çubuğundaki modüller** üzerine kuruludur:
+## Bölüm 1: Lezzet Kaşifi Olmak
+Uygulamanın kalbi, sizi sürekli keşfetmeye teşvik eden basit ve ödüllendirici bir döngü üzerine kuruludur. Lütfen aşağıdaki senaryoyu test ediniz:  
+
+### 🏆 Temel Oyun Döngüsü Testi
+- **Hayal Edin:** Herhangi bir Türk yemeğini (örneğin, Ankara'da Döner) yediğinizi varsayın.  
+- **Kaydedin (En Önemli Eylem):**  
+  Ana Sayfa'daki "Add Memory" (Anı Ekle) butonuna basın.  
+  Açılan ekranda, yediğiniz yemeği (Döner) ve şehri (Ankara) aratarak seçin. Tarihi de belirleyip "Save Memory" (Anıyı Kaydet) butonuna basın.  
+- **Anında Geri Bildirimi Gözlemleyin:**  
+  Ana Sayfa'ya döndüğünüzde, "Your Next Quest" (Sıradaki Görevin) kartındaki ilerleme çubuğunun anında güncellendiğini teyit edin. Bu, Sinyal Tabanlı Reaktif mimarimizin bir sonucudur.  
+- **Anı Defterinizi Görüntüleyin:**  
+  Ana Sayfa'daki "Journal" (Anı Defteri) butonuna basın.  
+  Az önce eklediğiniz Ankara'daki Döner anısının, şık bir defter formatında ilk sayfada göründüğünü teyit edin. Sayfalar arasında gezinmeyi deneyin.  
+- **Ödüllendirme Anı:**  
+  Bu işlemi 2 farklı şehirden daha yemek ekleyerek tekrarlayın (örn: İstanbul'dan Islak Burger, Gaziantep'ten Baklava).  
+  Üçüncü anıyı eklediğiniz anda, "Regional Traveler" (Bölgesel Gezgin) rozetini kazandığınızı bildiren animasyonlu tebrik diyalogunun ekranda belirdiğini test edin.  
+- **İlerlemenizi Keşfedin:**  
+  "Achievements" (Başarımlar) butonuna basarak "Badges" (Rozetler) sekmesine geçin ve yeni kazandığınız rozetin artık renkli ve kilitsiz olduğunu görün. Kilitli bir rozete tıklayarak nasıl kazanılabileceği bilgisini içeren diyalogu test edin.  
 
 ---
 
-### 🏠 Özellik 1: Dinamik Ana Sayfa (Erişim Paneli)
-Uygulamanın açılış ekranı, size ilham vermek ve yolculuğunuzu özetlemek için tasarlanmış oyunlaştırılmış bir **kontrol merkezidir**.  
+## Bölüm 2: Modüllerin Detaylı Testi
 
-**Nasıl Kullanılır ve Ne Test Edilmeli:**  
-- **Öne Çıkan Lezzetler:**  
-  - En üstteki büyük ve kaydırılabilir kartları inceleyin.  
-  - Kartın üzerine tıklayarak **yemeğin detay sayfasına** gidin.  
-  - Kartın altındaki **şehir etiketine** (örn: "Kayseri") tıklayarak, uygulamanın sizi doğrudan o şehrin seçili olduğu **Discover (Keşfet)** sekmesine yönlendirdiğini teyit edin.  
+### 🏠 2.1. Dinamik Ana Sayfa (Erişim Paneli)
+- **Öne Çıkan Lezzetler (Featured Dishes):** En üstteki kaydırılabilir kartlardan birine (örneğin Mantı) tıklayın. Bu sizi bir sonraki test adımı olan Yemek Detay Sayfası'na götürecektir.  
+- **Şehir Etiketiyle Yönlendirme:** Ana Sayfa'ya geri dönün. Kartın altındaki şehir etiketine (örn: "Kayseri") tıklayarak, uygulamanın sizi doğrudan o şehrin seçili olduğu Discover (Keşfet) sekmesine ışınladığını teyit edin.  
 
-- **Eylem Merkezi ve Yolculuğunuz:**  
-  - **Add Memory:** Oyun döngüsünü başlatan en önemli butondur.  
-  - **Journal:** Eklediğiniz tüm anıları şık bir defter formatında gösterir.  
-  - **Favorites:** Favorilediğiniz yemekleri listeler.  
-  - **Achievements:** Görevlerinizi, rozetlerinizi ve genel istatistiklerinizi içerir.  
+### 📖 2.2. Yemek Detay Sayfası: Gastronomi Ansiklopedisi
+Bu sayfa, her yemeğin ruhunu ve detaylarını barındırır. Lütfen Ana Sayfa'dan bir yemeğe tıklayarak bu sayfayı açın ve aşağıdaki özellikleri test edin:  
 
-- **Sıradaki Göreviniz (Your Next Quest):**  
-  - Bu dinamik kart, aktif görevinizi ve ilerlemenizi gösterir.  
-  - Lütfen bir anı ekledikten sonra **ilerleme çubuğunun anında güncellendiğini** gözlemleyin.  
-
-- **Anında Ödüllendirme:**  
-  - Bir anı ekleyerek bir görevi tamamlamayı veya bir rozet kazanmayı deneyin.  
-  - Örn: **3 farklı şehirden anı ekleyerek "Regional Traveler" rozetini kazanın**.  
-  - Ekranda beliren **animasyonlu tebrik diyalogunu** test edin.  
+- **Favorilere Ekleme:** Sağ üst köşedeki kalp ikonuna basarak yemeği favorilerinize eklemeyi ve çıkarmayı test edin.  
+- **Telaffuz Yardımcısı:** Orta kısımdaki "Pronounce" (Telaffuz Et) butonuna basarak yemeğin isminin doğru okunuşunu dinleyin.  
+- **Garsona Göster (Dil Bariyerini Aşma):** "Show to Waiter" (Garsona Göster) butonuna basın. Yemeğin adının ve fotoğrafının büyük, net ve dikkat dağıtmayan bir ekranda belirdiğini teyit edin. Bu ekran, dil bariyerini aşmak için tasarlanmıştır.  
+- **Detaylı Bilgi Sekmeleri:**  
+  - "Story & Origin" (Hikaye ve Köken): Yemeğin kültürel hikayesini okuyun.  
+  - "Ingredients" (İçerik): Yemeğin malzemelerini ve alerjen bilgilerini (Gluten, Süt Ürünü, Kuruyemiş) kontrol edin.  
+  - "Pairing" (Yanında Ne Gider): Yemekle birlikte hangi içeceklerin veya yan lezzetlerin iyi gittiğine dair tavsiyeleri inceleyin.  
 
 ---
 
-### 🏆 Özellik 2: Oyunlaştırılmış Keşif Döngüsü (Temel Deneyim)
-Uygulamanın kalbi, sizi sürekli keşfetmeye teşvik eden basit bir döngü üzerine kuruludur:  
+## 🗺️ Bölüm 3: İnteraktif Keşif (Discover - Keşfet Sekmesi)
+Bu sekme, uygulamanın en akıllı özelliklerini barındırır. Lütfen aşağıdaki adımları sırasıyla takip edin:  
 
-1. **Deneyimleyin:** Gerçek hayatta bir yemeği tadın.  
-2. **Kaydedin (En Önemli Eylem):**  
-   Ana Sayfa'daki **"Add Memory"** butonuna basarak tattığınız yemeği **Lezzet Pasaportunuza** kaydedin.  
-3. **Ödüllendirilin:**  
-   Anınızı kaydettiğiniz anda **"Your Next Quest"** kartının güncellendiğini gözlemleyin.  
-   Eğer bir görev tamamlarsanız veya rozet kazanırsanız, ekranda anında bir **tebrik mesajı** belirecektir.  
-4. **İlerlemenizi Görün:**  
-   **Achievements** butonuna basarak kişisel gastronomi müzenizi ve başarılarınızı inceleyin.  
-
----
-
-### 🗺️ Özellik 3: İnteraktif Keşif (Discover Sekmesi)
-Bir şehri **chatbot yardımıyla keşfetmenizi** sağlar.  
-
-**Nasıl Kullanılır:**  
-1. Alt çubuktan **Discover** sekmesine dokunun.  
-2. Türkiye haritası üzerinden keşfetmek istediğiniz bir şehre (örn: **Ankara**) tıklayın.  
-3. Chatbot size o şehrin en meşhur yerel lezzetlerini sunar.  
-4. **📍 Find places for local food** butonuna basarak, konumunuza en yakın restoranları listeleyen **Mekan Kaşifi** sayfasını açın.  
+1. Alt navigasyon çubuğundan Discover (Keşfet) sekmesine dokunun. Harita üzerindeki "A Legacy of Flavor" (Bir Lezzet Mirası) atmosferini ve arka plan animasyonunu gözlemleyin.  
+2. Haritadan Gaziantep'e tıklayın.  
+3. **İçeriden İpucu (Insider Tip):** Şehri seçtiğinizde ekrana gelen "Insider Tip" penceresini test edin. Bu, o şehre özel, yerel halkın bildiği bir lezzet tavsiyesidir.  
+4. **Chatbot Karşılaması:** Chatbot sizi karşılayacak ve Gaziantep'e özel yerel lezzetleri yatay bir listede sunacaktır.  
+5. **Yemek Detaylarını Keşfetme:**  
+   - Chatbot'un sunduğu yerel lezzetler listesindeki herhangi bir yemeğin üzerine (örneğin Baklava) dokunun.  
+   - Yemeğin hikayesini, içeriğini ve telaffuzunu içeren Yemek Detay Sayfası'nın (Food Details Page) açıldığını teyit edin.  
+   - Sağ üst köşedeki kalp ikonuna basarak yemeği favorilerinize eklemeyi test edin.  
+6. **Chatbot Yetenekleri:**  
+   - **Kültürel Derinlik:**  
+     "ℹ️ More about Gaziantep" (Gaziantep Hakkında Daha Fazla Bilgi) → "Food Culture" (Yemek Kültürü).  
+   - **Türkiye Mutfağını Keşfetme:**  
+     "🇹🇷 Explore all Turkish Cuisine" (Tüm Türk Mutfağını Keşfet) → "🍰 Desserts" (Tatlılar).  
+   - **Mekan Bulma (Venue Explorer):**  
+     "📍 Find places..." (Mekan Bul...) → Google Places API ile yakın restoranları listeler.  
 
 ---
 
-### 📸 Özellik 4: Yapay Zeka ile Yemek Tanıma (Recognize Sekmesi)
-Gördüğünüz bir yemeğin ne olduğunu **anında öğrenmenizi** sağlar.  
+## 📸 Bölüm 4. Yapay Zeka ile Yemek Tanıma (Recognize - Tanı Sekmesi)
+- **Modülü Başlatma:** Alt çubuktan Recognize (Tanı) sekmesine dokunun. Ortadaki kamera ikonuna basarak telefonunuzun galerisini açın.  
+- **Fotoğraf Seçimi:** Galerinizden lahmacun, iskender, baklava veya yaprak sarma gibi belirgin bir Türk yemeği fotoğrafı seçin. Modelin en iyi sonuçları bu ikonik yemeklerde verdiğini göreceksiniz.  
+- **Yapay Zeka Analizi:** Fotoğrafı seçtiğinizde, uygulamanın TensorFlow Lite modelini kullanarak yemeği tanımasını bekleyin. Bu işlem, internet bağlantısı gerektirmeden, tamamen cihaz üzerinde gerçekleşir ve birkaç saniye sürebilir.  
+- **İnteraktif Sonuç Ekranı:** Model yemeği tanıdığında, ekranın statik bir sonuç yerine dinamik bir sohbet arayüzüne dönüştüğünü gözlemleyin. Chatbot'un size yemeğin ismini söylediğini ("It looks like you're having Lahmacun!") ve ne öğrenmek istediğinizi sorduğunu teyit edin.  
+- **Detaylı Bilgi Alma:** Chatbot'un sunduğu butonları kullanarak yemek hakkında derinlemesine bilgi almayı test edin:  
+  - "Story & Origin" (Hikaye ve Köken)  
+  - "How to Pronounce?" (Nasıl Telaffuz Edilir?)  
+  - Diğer seçenekler  
 
-**Nasıl Kullanılır:**  
-1. Alt çubuktan **Recognize** sekmesine dokunun.  
-2. Kamera ikonuna basın ve galerinizden yöresel bir Türk yemeği fotoğrafı seçin.  
-3. Yapay zeka modeli fotoğrafı analiz eder ve sonucu **sohbet ekranında** sunar.  
-> Not: Şu an geliştirilme aşamasında, en meşhur **25 Türk yemeğini** tanımaktadır (lahmacun, iskender, baklava, yaprak sarma vb.).  
-
----
-
-### 📝 Özellik 5: Menü Tercümanı (Scan Menu Sekmesi)
-Menüleri anlamanızı sağlayan **kişisel çevirmeninizdir**.  
-
-**Nasıl Kullanılır:**  
-1. Alt çubuktan **Scan Menu** sekmesine dokunun.  
-2. Kamerayı menüye odaklayın.  
-3. **Scan Menu** butonuna basın ve uygulamanın tanıdığı yemekleri listelemesini izleyin.  
+> Not: Yapay zeka modeli, projenin bu aşamasında en meşhur 25 Türk yemeğini yüksek doğrulukla tanımak üzere eğitilmiştir.  
 
 ---
 
-### 🧭 Özellik 6: Kürate Edilmiş Gurme Rotaları (Routes Sekmesi)
+## 📝 Bölüm 5. Menü Tercümanı (Scan Menu - Menü Tara Sekmesi)
+1. Alt çubuktan Scan Menu (Menü Tara) sekmesine dokunun.  
+2. Elinizde basılı bir menü varsa ona, yoksa internetten bulduğunuz bir Türk restoranı menüsünün ekran görüntüsüne kamerayı odaklayın.  
+3. "Scan Menu" (Menüyü Tara) butonuna basın ve uygulamanın, menüdeki metinleri okuyup veritabanındaki yemeklerle eşleştirerek bir sonuç listesi oluşturduğunu gözlemleyin.  
+
+---
+
+## 🧭 Bölüm 6. Kürate Edilmiş Gurme Rotaları (Routes Sekmesi)
 Sizin için özenle hazırlanmış **tematik lezzet turlarını** sunar.  
 
 **Nasıl Kullanılır:**  
-1. Alt çubuktan **Routes** sekmesine dokunun.  
-   _(Şu anda sadece Ankara rotaları listelenecektir.)_  
+1. Alt çubuktan **Routes** sekmesine dokunun. _(Şu anda sadece Ankara rotaları listelenecektir.)_  
 2. İlgilendiğiniz bir rota kartına tıklayın.  
 3. Açılan arayüzde, harita üzerindeki rota çizgisini ve özel durak etiketlerini inceleyin.  
 4. Bilgi panelini yukarı kaydırarak **rota detaylarını** ve **durak listesini** görüntüleyin.  
