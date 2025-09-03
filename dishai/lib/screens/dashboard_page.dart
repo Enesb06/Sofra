@@ -30,7 +30,9 @@ import '../services/quest_service.dart';
 import 'quests_page.dart';
 import '../services/badge_check_service.dart';
 import 'favorites_page.dart';
-import 'journal_page.dart'; // <-- Bu yeni sayfayı import et
+import 'journal_page.dart'; 
+import 'package:google_fonts/google_fonts.dart'; 
+
 
 typedef TabNavigationRequest = void Function(int tabIndex, {City? city});
 typedef FoodNavigationRequest = void Function(FoodDetails food);
@@ -172,14 +174,24 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return CustomScrollView(
       slivers: [
-        SliverAppBar(
+                 SliverAppBar(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
           pinned: true,
           expandedHeight: 120.0,
           flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    title: Text( 'Sofra', style: TextStyle( color: Theme.of(context).textTheme.titleLarge?.color, fontWeight: FontWeight.bold, fontSize: 22,), ),
+            centerTitle: true,
+            title: Text(
+              'Sofra',
+              style: GoogleFonts.playfairDisplay(
+                color: Theme.of(context).colorScheme.primary, // Rengi temadan alalım, daha canlı dursun
+                fontWeight: FontWeight.bold,
+                fontSize: 36, // <-- YAZI BOYUTUNU BÜYÜTTÜK
+                letterSpacing: 1.2, // Harf aralığını hafifçe açtık
+              ),
+            ),
+            // Başlığın kaydırıldığında küçülürkenki dikey pozisyonunu ayarlar
+            collapseMode: CollapseMode.pin, 
             background: Container(color: Colors.transparent),
           ),
         ),
