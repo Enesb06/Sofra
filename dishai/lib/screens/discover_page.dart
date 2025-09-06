@@ -238,7 +238,7 @@ class DiscoverPageState extends State<DiscoverPage> with TickerProviderStateMixi
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedCity?.cityName ?? 'Sofra - Flavor Explorer'),
+        title: Text(_selectedCity?.cityName ?? 'Flavor Explorer'),
         leading: _selectedCity != null 
             ? IconButton(
                 icon: const Icon(Icons.map_outlined), 

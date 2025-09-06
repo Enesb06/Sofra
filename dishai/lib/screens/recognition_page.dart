@@ -259,12 +259,12 @@ class _RecognitionPageState extends State<RecognitionPage> {
   Widget build(BuildContext context) {
     if (!_modelLoaded) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Sofra - Dish Recognizer')),
+        appBar: AppBar(title: const Text('Dish Recognizer')),
         body: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [LoadingAnimation(), SizedBox(height: 20), Text("Preparing AI model...", style: TextStyle(fontSize: 16, color: Colors.grey))])),
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Sofra - Dish Recogizer'), actions: [if (_isChatActive) IconButton(icon: const Icon(Icons.refresh), onPressed: _resetState, tooltip: 'Start Over')]),
+      appBar: AppBar(title: const Text('Dish Recogizer'), actions: [if (_isChatActive) IconButton(icon: const Icon(Icons.refresh), onPressed: _resetState, tooltip: 'Start Over')]),
       body: Column(children: [
         if (_image != null && !_isChatActive) Padding(padding: const EdgeInsets.all(16.0), child: ClipRRect(borderRadius: BorderRadius.circular(12.0), child: Image.file(_image!, height: 200, width: double.infinity, fit: BoxFit.cover))),
         if (_loading) const Expanded(child: LoadingAnimation()),

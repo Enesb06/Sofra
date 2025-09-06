@@ -33,25 +33,26 @@ class FestivalDetailPage extends StatelessWidget {
     final String dateRange = '${DateFormat.yMMMMd('en_US').format(festival.startDate)} - ${DateFormat.yMMMMd('en_US').format(festival.endDate)}';
     
     return Scaffold(
+      // --- DEĞİŞİKLİK BURADA: AppBar'ı tema ile uyumlu hale getiriyoruz ---
       appBar: AppBar(
-        title: const Text(''), 
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        // Başlığa "Festival Details" gibi genel bir metin ekleyebiliriz.
+        // Veya festivalin adını göstermek için: title: Text(festival.nameEn),
+        title: const Text('Festival Details'), 
+        // backgroundColor ve elevation satırlarını siliyoruz.
+        // Bu sayede main.dart'taki temamızdan turuncu rengi otomatik olarak alacak.
       ),
+      // --- BİTTİ ---
       body: SingleChildScrollView(
+        // İçerikte hiçbir değişiklik yapmıyoruz, olduğu gibi kalıyor.
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- DEĞİŞİKLİK BURADA: Sabit yüksekliği ve fit özelliğini kaldırıyoruz ---
             CachedNetworkImage(
               imageUrl: festival.coverImageUrl,
-              width: double.infinity, // Genişliği doldurmaya devam etsin
-              // height: 250,  <-- BU SATIRI SİLDİK
-              // fit: BoxFit.cover, <-- BU SATIRI SİLDİK
+              width: double.infinity,
               placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.grey)),
             ),
-            // --- BİTTİ ---
 
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
