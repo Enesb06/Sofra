@@ -32,6 +32,9 @@ import '../services/badge_check_service.dart';
 import 'favorites_page.dart';
 import 'journal_page.dart'; 
 import 'package:google_fonts/google_fonts.dart'; 
+import '../models/festival_model.dart';
+import 'festivals_page.dart';
+import 'festival_detail_page.dart';
 
 
 typedef TabNavigationRequest = void Function(int tabIndex, {City? city});
@@ -117,9 +120,15 @@ class _DashboardPageState extends State<DashboardPage> {
       await DatabaseHelper.instance.batchUpsertRoutes(routeList);
       final stopsResponse =
           await Supabase.instance.client.from('route_stops').select();
+            final festivalsResponse =
+          await Supabase.instance.client.from('festivals').select();
       final List<RouteStop> stopList =
           await compute(parseRouteStops, stopsResponse as List);
       await DatabaseHelper.instance.batchUpsertRouteStops(stopList);
+
+       final List<Festival> festivalList =
+          await compute(parseFestivals, festivalsResponse as List);
+      await DatabaseHelper.instance.batchUpsertFestivals(festivalList);
       syncCompletedNotifier.value = true;
       return true;
     } catch (e) {
@@ -275,7 +284,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+
+             const _FestivalsSection(),
 
             // Görev kartı artık kendi koşuluyla, her zaman görünür olacak.
             if (_currentQuestProgress != null)
@@ -284,16 +295,13 @@ class _DashboardPageState extends State<DashboardPage> {
             // "Son Anı" kartı ise sadece bir anı varsa görünecek.
             if (_latestMemory != null) 
               _LatestMemoryCard(memory: _latestMemory!),
-            // --- BİTTİ ---
             
             const SizedBox(height: 24),
-           
           ]),
         ),
       ],
     );
   }
-
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 4.0),
@@ -755,6 +763,214 @@ class _FlavorQuestCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// lib/screens/dashboard_page.dart DOSYASININ EN ALTINDAN _UpcomingFestivalsCard'I SİL
+// VE YERİNE BU ÜÇ YENİ WIDGET'I EKLE:
+
+// --- YENİ BÖLÜM WIDGET'I (ANA KONTROLCÜ) ---
+class _FestivalsSection extends StatefulWidget {
+  const _FestivalsSection();
+
+  @override
+  State<_FestivalsSection> createState() => _FestivalsSectionState();
+}
+
+class _FestivalsSectionState extends State<_FestivalsSection> {
+  late Future<List<Festival>> _festivalsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Veriyi sadece bir kez yükle
+    _festivalsFuture = DatabaseHelper.instance.getUpcomingFestivals(limit: 4);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Festival>>(
+      future: _festivalsFuture,
+      builder: (context, snapshot) {
+        // Veri yoksa veya yükleniyorsa, hiçbir şey gösterme
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final festivals = snapshot.data!;
+
+        return Column(
+          children: [
+            // "Upcoming Festivals" ve "See All >" başlığı
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 0, 8.0, 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Upcoming Festivals",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FestivalsPage()),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("See All"),
+                        SizedBox(width: 2),
+                        Icon(Icons.arrow_forward_ios, size: 14),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Yatay kaydırılabilir festival kartları
+            SizedBox(
+              height: 220, // Liste yüksekliğini belirliyoruz
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: festivals.length,
+                itemBuilder: (context, index) {
+                  return _MiniFestivalCard(festival: festivals[index]);
+                },
+              ),
+            ),
+            const SizedBox(height: 16), // Alt boşluk
+          ],
+        );
+      },
+    );
+  }
+}
+// lib/screens/dashboard_page.dart DOSYASININ EN ALTINDAKİ
+// _MiniFestivalCard WIDGET'INI BUNUNLA DEĞİŞTİR
+
+class _MiniFestivalCard extends StatelessWidget {
+  final Festival festival;
+  const _MiniFestivalCard({required this.festival});
+
+  // --- DEĞİŞİKLİK BURADA: Sadece dış köşeyi yuvarlatıyoruz ---
+  Widget _buildStatusTag({required String text, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        // Sadece sağ üst köşeyi yuvarlatıyoruz.
+        // Bu, etikete şık bir "kurdele" efekti verir.
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(12.0),
+        ),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 7,
+        ),
+      ),
+    );
+  }
+  // --- BİTTİ ---
+
+  @override
+  Widget build(BuildContext context) {
+    final dateText = '${DateFormat.MMMd().format(festival.startDate)} - ${DateFormat.MMMd().format(festival.endDate)}';
+
+    final now = DateUtils.dateOnly(DateTime.now());
+    final startDate = DateUtils.dateOnly(festival.startDate);
+    final endDate = DateUtils.dateOnly(festival.endDate);
+
+    final bool isOngoing = !now.isBefore(startDate) && !now.isAfter(endDate);
+    final bool isUpcoming = now.isBefore(startDate);
+
+    return SizedBox(
+      width: 160,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => FestivalDetailPage(festival: festival)),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: festival.coverImageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.grey.shade200),
+                      errorWidget: (context, url, error) => Container(color: Colors.grey.shade300, child: const Icon(Icons.image_not_supported)),
+                    ),
+                    // Positioned kısmı aynı kalıyor, köşeye sıfır.
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: Builder(
+                        builder: (context) {
+                          if (isOngoing) {
+                            return _buildStatusTag(text: 'LIVE NOW', color: Colors.red.shade600);
+                          }
+                          if (isUpcoming) {
+                            return _buildStatusTag(text: 'UPCOMING', color: Colors.green.shade600);
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        festival.nameEn,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, height: 1.2),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            dateText,
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

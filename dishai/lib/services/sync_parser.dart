@@ -8,6 +8,7 @@ import '../models/city_model.dart';
 import '../models/city_food_model.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
+import '../models/festival_model.dart';
 
 // Gelen ham veriyi FoodDetails listesine çevirir.
 List<FoodDetails> parseFoods(List<dynamic> data) {
@@ -32,4 +33,8 @@ List<RouteModel> parseRoutes(List<dynamic> data) {
 // Gelen ham veriyi RouteStop listesine çevirir.
 List<RouteStop> parseRouteStops(List<dynamic> data) {
   return data.map((item) => RouteStop.fromMap(item)).toList();
+}
+
+List<Festival> parseFestivals(List<dynamic> data) {
+  return data.map((item) => Festival.fromJson(item)).toList();
 }

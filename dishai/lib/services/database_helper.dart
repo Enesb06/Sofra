@@ -12,6 +12,8 @@ import '../models/tasted_food_model.dart';
 import '../models/food_tip_model.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
+import '../models/festival_model.dart'; 
+
 
 
 class TastedFoodInfo {
@@ -24,7 +26,7 @@ class TastedFoodInfo {
 class DatabaseHelper {
   static const _databaseName = "DishAI.db";
   // Veritabanı şeması değiştiği için versiyonu artırıyoruz (cities'e yeni sütunlar).
-static const _databaseVersion = 14; // Yeni
+static const _databaseVersion = 15; // Yeni
 
   // Tablo ve Sütun Sabitleri (Değişiklik Yok)
   static const tableFoods = 'foods';
@@ -103,6 +105,8 @@ static const _databaseVersion = 14; // Yeni
    static const tableUserBadges = 'user_badges';
   static const columnBadgeId = 'badge_id';
 
+  static const tableFestivals = 'festivals';
+
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
@@ -165,6 +169,7 @@ static const _databaseVersion = 14; // Yeni
         $columnBadgeId TEXT PRIMARY KEY
       )
     ''');
+    await _createFestivalsTable(db);
 
 
   }
@@ -241,6 +246,25 @@ static const _databaseVersion = 14; // Yeni
       ''');
        if (kDebugMode) { print("✅ v14: user_badges tablosu oluşturuldu."); }
     }
+     if (oldVersion < 15) {
+      await _createFestivalsTable(db);
+      if (kDebugMode) { print("✅ v15: festivals tablosu oluşturuldu."); }
+    }
+  }
+    Future<void> _createFestivalsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS festivals (
+        id INTEGER PRIMARY KEY,
+        name_en TEXT NOT NULL,
+        city_name TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        description_en TEXT NOT NULL,
+        cover_image_url TEXT NOT NULL,
+        official_website_url TEXT,
+        location_coordinates TEXT
+      )
+    ''');
   }
 
 
@@ -676,6 +700,68 @@ static const _databaseVersion = 14; // Yeni
     final db = await instance.database;
     final List<Map<String, dynamic>> maps = await db.query(tableUserBadges);
     return maps.map((map) => map[columnBadgeId] as String).toSet();
+  }
+
+  // --- YENİ FESTİVAL VERİTABANI METOTLARI ---
+  Future<void> batchUpsertFestivals(List<Festival> festivals) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (var festival in festivals) {
+      batch.insert(tableFestivals, festival.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Tüm festivalleri, başlangıç tarihine göre sıralanmış şekilde getirir.
+  /// Bitiş tarihi geçmiş olanları sona atar.
+  Future<List<Festival>> getAllFestivals() async {
+    final db = await instance.database;
+    final String today = DateTime.now().toIso8601String().split('T').first;
+
+    // Önce yaklaşan ve devam eden festivalleri, sonra geçmiş festivalleri getiren
+    // akıllı bir SQL sorgusu.
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT *, 
+        CASE 
+          WHEN end_date >= ? THEN 0
+          ELSE 1
+        END AS is_past
+      FROM festivals
+      ORDER BY is_past ASC, start_date ASC
+    ''', [today]);
+    
+    return List.generate(maps.length, (i) => Festival.fromMap(maps[i]));
+  }
+    /// Ana sayfada gösterilmek üzere, en öncelikli festivalleri getirir.
+  /// Sıralama Mantığı:
+  /// 1. Şu an devam edenler (başlangıç tarihine göre en eski olan en üstte).
+  /// 2. Yaklaşanlar (başlangıç tarihine göre en yakın olan en üstte).
+  Future<List<Festival>> getUpcomingFestivals({int limit = 4}) async {
+    final db = await instance.database;
+    final String today = DateTime.now().toIso8601String().split('T').first;
+
+    // --- AKILLI SIRALAMA SORGUSU ---
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT *,
+        -- 1. Koşul: Festival şu an devam ediyor mu? (Bugün, başlangıç ve bitiş arasında mı?)
+        -- Ediyorsa, bu festivale öncelik puanı "0" ver.
+        -- Etmiyorsa (yani yaklaşan bir festivalse), öncelik puanı "1" ver.
+        CASE 
+          WHEN start_date <= ? AND end_date >= ? THEN 0
+          ELSE 1
+        END AS priority
+      FROM festivals
+      -- 2. Koşul: Sadece bitmemiş festivalleri seç.
+      WHERE end_date >= ?
+      -- 3. Sıralama: Önce "priority"e göre (yani önce devam edenler),
+      -- sonra da başlangıç tarihine göre sırala.
+      ORDER BY priority ASC, start_date ASC
+      -- 4. Limit: Sadece belirtilen sayıda sonuç getir.
+      LIMIT ?
+    ''', [today, today, today, limit]);
+    
+    return List.generate(maps.length, (i) => Festival.fromMap(maps[i]));
   }
 }
 

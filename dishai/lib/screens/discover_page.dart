@@ -79,7 +79,10 @@ class DiscoverPageState extends State<DiscoverPage> with TickerProviderStateMixi
     'assets/images/scenes/scene_2.png',
     'assets/images/scenes/scene_3.png',
     'assets/images/scenes/scene_4.png',
+    'assets/images/scenes/scene_6.png',
     'assets/images/scenes/scene_5.png',
+  
+    
   ];
 
   final Map<String, String> _turkishCuisineCategories = {
