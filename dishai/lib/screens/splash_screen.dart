@@ -68,43 +68,60 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepOrange.shade50,
-      body: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // "Sofra" yazısı ve alt başlık
-            FadeTransition(
-              // Yazının tamamı animasyonla birlikte yavaşça belirecek
-              opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeIn),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Sofra',
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 52,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Your Personal Turkish Gastronomy Envoy',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      // backgroundColor'ı yine kaldırıyoruz, çünkü Stack ekranı kaplayacak.
+      body: Stack( // Ana widget'ı Stack yapıyoruz.
+        fit: StackFit.expand, // Stack ekranı doldursun.
+        children: [
+          // 1. Katman: Arka Plan Resmi
+          Image.asset(
+            'assets/images/sofra_background.png',
+            fit: BoxFit.cover,
+          ),
 
-            // Dönen ikonlar yerine sabit duran ikonlar
-            for (int i = 0; i < _foodIcons.length; i++)
-              _buildAnimatedIcon(i),
-          ],
-        ),
+          // 2. Katman: Renk Filtresi
+          Container(
+            color: Colors.deepOrange.shade50.withOpacity(0.75),
+          ),
+          
+          // 3. Katman: Orijinal içeriğin kendisi (Center ve içindeki Stack)
+          // Bu, tüm logo ve ikonların ekranın ortasında kalmasını garanti eder.
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // "Sofra" yazısı ve alt başlık
+                FadeTransition(
+                  opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeIn),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Sofra',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 52,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Your Personal Turkish Gastronomy Envoy',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sabit duran ikonlar
+                for (int i = 0; i < _foodIcons.length; i++)
+                  _buildAnimatedIcon(i),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -147,8 +164,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       },
       child: Image.asset(
         _foodIcons[index],
-        width: 48,
-        height: 48,
+        width: 80,
+        height: 80,
         color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
       ),
     );

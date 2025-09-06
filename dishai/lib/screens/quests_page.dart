@@ -262,16 +262,21 @@ class _QuestProgressCard extends StatelessWidget {
         : progress.currentProgress / progress.quest.totalTarget;
     final bool isCompleted = progress.isCompleted;
 
-    return Card(
+      return Card(
+      // --- DEĞİŞİKLİKLER BURADA ---
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: isCompleted ? 1 : 4,
+      elevation: 5, // Gölgeyi biraz daha belirgin yap.
+      shadowColor: Colors.grey.shade100.withOpacity(0.5), // Gölge rengini yumuşat.
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        // Kenarlık rengini görevin durumuna göre akıllıca belirliyoruz.
         side: BorderSide(
-          color: isCompleted ? Colors.green.shade300 : Colors.transparent,
-          width: 2,
+          color: isCompleted ? Colors.green.shade300 : Colors.grey.shade200,
+          width: isCompleted ? 2 : 1, // Tamamlanmışsa kenarlık daha kalın olsun.
         ),
       ),
+      // --- BİTTİ ---
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

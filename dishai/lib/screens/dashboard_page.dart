@@ -606,9 +606,17 @@ class _LatestMemoryCard extends StatelessWidget {
   const _LatestMemoryCard({required this.memory});
   @override
   Widget build(BuildContext context) {
-    return Card(
+      return Card(
+      // --- DEĞİŞİKLİKLER BURADA ---
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      elevation: 5,
+      shadowColor: Colors.grey.shade100.withOpacity(0.5),
+      // --- BİTTİ ---
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
@@ -679,10 +687,17 @@ class _FlavorQuestCard extends StatelessWidget {
         : progress.currentProgress / progress.quest.totalTarget;
 
     return Card(
+      // --- DEĞİŞİKLİKLER BURADA ---
+      color: Colors.white, // 1. Arka planı bembeyaz yap.
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
-       shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      // 2. Kenarlığı ve daha yumuşak gölgeyi tanımla.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16), // Köşeleri biraz daha yuvarlak yapalım.
+        side: BorderSide(color: Colors.grey.shade200, width: 1), // 3. Çok hafif kenarlık.
+      ),
+      elevation: 5, // Gölgeyi biraz daha belirgin yap.
+      shadowColor: Colors.grey.shade100.withOpacity(0.5), // Gölge rengini yumuşat.
+      // --- BİTTİ ---
       child: InkWell(
         borderRadius: BorderRadius.circular(
             12),
@@ -899,11 +914,18 @@ class _MiniFestivalCard extends StatelessWidget {
     return SizedBox(
       width: 160,
       child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 4,
-        margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
-        child: InkWell(
+        color: Colors.white, // 1. Arka planı beyaz yap.
+            clipBehavior: Clip.antiAlias,
+            // 2. Kenarlığı ve daha yuvarlak köşeleri tanımla.
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), // Köşeleri diğerleriyle aynı yapalım.
+              side: BorderSide(color: Colors.grey.shade200, width: 1), // 3. Hafif kenarlık.
+            ),
+            elevation: 5, // Gölge
+            shadowColor: Colors.grey.shade100.withOpacity(0.5), // Yumuşak gölge rengi
+            margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+            // --- BİTTİ ---
+            child: InkWell(
           onTap: () {
             Navigator.push(
               context,
