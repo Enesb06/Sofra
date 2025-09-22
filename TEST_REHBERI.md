@@ -78,7 +78,24 @@ Bu sayfa, her yemeğin ruhunu ve detaylarını barındırır. Lütfen Ana Sayfa'
 
 ---
 
-## 🗺️ Bölüm 3: İnteraktif Keşif (Discover - Keşfet Sekmesi)
+## 🎉 Bölüm 3. Gastronomi Festivalleri (Festivals Sekmesi)
+
+Uygulama, sadece yemekleri değil, aynı zamanda Türkiye’nin zengin gastronomi kültürünü kutlayan etkinlikleri de keşfetmenize yardımcı olur.  
+
+### 📌 Ana Sayfa'dan 
+Ana Sayfa’da **"Upcoming Festivals" (Yaklaşan Festivaller)** başlığı altında en yakın tarihte gerçekleşecek **4 gastronomi festivali ve etkinliği** kart formatında listelenir.İsterseniz merak ettiğiniz bir festival kartının üstüne basabilirsini isterseniz de See All butonuna basarak tüm festivalleri görebilirsiniz.
+
+### 🎟️ Festival Kartı Özellikleri
+- **Date (Tarih):** Festivalin gerçekleşeceği tarih bilgisi.
+- **City (Şehir):** Festivalin gerçekleşeceği şehir.
+- **About Festival (Festival Hakkında):** Etkinliğin kısa tanıtımı ve öne çıkan detaylar.
+- **View on Map (Haritada Gör):** Festivalin konumunu haritada açarak kolayca ulaşmanızı sağlar.  
+- **Official Website (Resmi Web Sitesi):** Daha fazla bilgi için festivalin resmi web sitesine yönlendirir.  
+
+> Bu özellik sayesinde kullanıcılar, gezilerini planlarken gastronomik festivalleri de deneyimlerine dahil edebilir.
+
+---
+## 🗺️ Bölüm 4: İnteraktif Keşif (Discover - Keşfet Sekmesi)
 Bu sekme, uygulamanın en akıllı özelliklerini barındırır. Lütfen aşağıdaki adımları sırasıyla takip edin:  
 
 1. Alt navigasyon çubuğundan Discover (Keşfet) sekmesine dokunun. Harita üzerindeki "A Legacy of Flavor" (Bir Lezzet Mirası) atmosferini ve arka plan animasyonunu gözlemleyin.  
@@ -99,7 +116,7 @@ Bu sekme, uygulamanın en akıllı özelliklerini barındırır. Lütfen aşağ�
 
 ---
 
-## 📸 Bölüm 4. Yapay Zeka ile Yemek Tanıma (Recognize - Tanı Sekmesi)
+## 📸 Bölüm 5. Yapay Zeka ile Yemek Tanıma (Recognize - Tanı Sekmesi)
 - **Modülü Başlatma:** Alt çubuktan Recognize (Tanı) sekmesine dokunun. Ortadaki kamera ikonuna basarak telefonunuzun galerisini açın.  
 - **Fotoğraf Seçimi:** Galerinizden lahmacun, iskender, baklava veya yaprak sarma gibi belirgin bir Türk yemeği fotoğrafı seçin. Modelin en iyi sonuçları bu ikonik yemeklerde verdiğini göreceksiniz.  
 - **Yapay Zeka Analizi:** Fotoğrafı seçtiğinizde, uygulamanın TensorFlow Lite modelini kullanarak yemeği tanımasını bekleyin. Bu işlem, internet bağlantısı gerektirmeden, tamamen cihaz üzerinde gerçekleşir ve birkaç saniye sürebilir.  
@@ -113,14 +130,14 @@ Bu sekme, uygulamanın en akıllı özelliklerini barındırır. Lütfen aşağ�
 
 ---
 
-## 📝 Bölüm 5. Menü Tercümanı (Scan Menu - Menü Tara Sekmesi)
+## 📝 Bölüm 6. Menü Tercümanı (Scan Menu - Menü Tara Sekmesi)
 1. Alt çubuktan Scan Menu (Menü Tara) sekmesine dokunun.  
 2. Elinizde basılı bir menü varsa ona, yoksa internetten bulduğunuz bir Türk restoranı menüsünün ekran görüntüsüne kamerayı odaklayın.  
 3. "Scan Menu" (Menüyü Tara) butonuna basın ve uygulamanın, menüdeki metinleri okuyup veritabanındaki yemeklerle eşleştirerek bir sonuç listesi oluşturduğunu gözlemleyin.  
 
 ---
 
-## 🧭 Bölüm 6. Kürate Edilmiş Gurme Rotaları (Routes Sekmesi)
+## 🧭 Bölüm 7. Kürate Edilmiş Gurme Rotaları (Routes Sekmesi)
 Sizin için özenle hazırlanmış **tematik lezzet turlarını** sunar.  
 
 **Nasıl Kullanılır:**  
