@@ -24,7 +24,7 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 3. Açılan Google Drive sayfasında, indirme ikonuna (sağ üstteki aşağı ok) basın.  
 4. Google, **"Bu dosya için virüs taraması yapılamıyor"** uyarısı gösterebilir. Bu standarttır.  
 5. **"Yine de indir" (Download anyway)** seçeneğine basarak **Sofra-v1.0.apk** dosyasını Android cihazınıza indirin.  
-6. İndirme süreci yavaş olabilir, lütfen iptal etmeyin. Sabırla bekleyin, sorunsuz bir şekilde indirme süreci tamamlanacaktır.  
+6. ⚠️⚠️İndirme süreci yavaş olabilir, lütfen iptal etmeyin. Sabırla bekleyin, sorunsuz bir şekilde indirme süreci tamamlanacaktır.30-40 saniye ilerleme olmuyor ama arka planda uygulama telefonunuza indiriliyor lütfen iptal etmeyin⚠️⚠️
 
 ### 1.2. Uygulamayı Yükleme (Kurulum)
 1. İndirme tamamlandıktan sonra, telefonunuzun bildirim panelinden veya **"Dosyalarım"** uygulamasından indirilen **Sofra-v1.0.apk** dosyasına dokunun.  
