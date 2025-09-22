@@ -33,6 +33,8 @@ Sofra, zengin bir gastronomi deneyimi sunmak için bir dizi güçlü özelliği 
 
 - 🧭 **Kürate Edilmiş Gurme Rotaları:** Sizin için özenle hazırladığımız tematik lezzet turlarını interaktif bir harita üzerinde deneyimleyin.
 
+- 🎉 **Gastronomi Festivalleri:** Yaklaşan gastronomi festivallerini keşfedin, tarihlerini öğrenin, detaylarını inceleyin ve harita üzerinden konumlarına kolayca ulaşın.  
+
 - 🗺️ **Akıllı Şehir Keşfi:** Bir şehri, size özel lezzetler ve mekanlar öneren bir chatbot ile sohbet ederek keşfedin.
 
 - 📖 **Kişisel Lezzet Pasaportu:** Tattığınız lezzetleri ve favorilerinizi kaydederek kendi gastronomi günlüğünüzü oluşturun.
