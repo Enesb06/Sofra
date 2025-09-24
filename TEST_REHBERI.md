@@ -19,6 +19,7 @@ Uygulama aktif geliştirme aşamasındadır. Testleriniz sırasında aşağıdak
 ## 1. Kurulum ve İlk Açılış
 
 ### 1.1. APK Dosyasını İndirme
+⚠️⚠️İndirme süreci yavaş olabilir, lütfen iptal etmeyin. Sabırla bekleyin, sorunsuz bir şekilde indirme süreci tamamlanacaktır.30-40 saniye ilerleme olmuyor ama arka planda uygulama telefonunuza indiriliyor lütfen iptal etmeyin⚠️⚠️
 1. Lütfen Android telefonunuzdan projemizin reposunu açın.  
 2. Projenin ana **README.md** dosyasında bulunan **"Uygulamayı İndir (Google Drive)"** linkine tıklayın.  
 3. Açılan Google Drive sayfasında, indirme ikonuna (sağ üstteki aşağı ok) basın.  
