@@ -7,7 +7,7 @@
 
 ### **🏆 Yarışma Sunumu**
 
-Bu proje, **Fikrim Gelecek: Gençler Arası Dijital Çözümler Yarışması** için hazırlanmıştır. Projeyi deneyimlemek için gereken tüm materyallere aşağıdaki tablodan ulaşabilirsiniz.
+Bu proje, **Fikrim Gelecek: Gençler Arası Dijital Çözümler Yarışması** için hazırlanmıştır. Projeyi deneyimlemek için gereken tüm materyallere aşağıdaki tablodan ulaşabilirsiniz.⚠️Lütfen uygulamayı indirirken Test rehberini okuyunuz. ⚠️
 
 | Materyal | Açıklama | ➡️ Erişim Linki |
 | :--- | :--- | :--- |
